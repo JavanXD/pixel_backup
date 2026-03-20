@@ -6,8 +6,6 @@ Remaining work across the project. Everything already implemented is tracked in 
 
 ## Shell Script
 
-- [ ] Optional checksum verification (md5/sha1) after copy
-
 ---
 
 ## macOS App
@@ -25,11 +23,6 @@ Remaining work across the project. Everything already implemented is tracked in 
 This is the right distribution path for this app. The App Store requires a fully sandboxed app,
 which is architecturally incompatible with executing a bundled `adb` binary and writing to
 user-chosen folders (see **App Store** section below for details).
-
-### Step 1 — App icon (blocking everything else)
-- [x] Design 1024×1024 PNG icon
-- [x] Generate all required sizes + `AppIcon.icns` (saved to `Sources/PixelBackup/Resources/AppIcon.icns`)
-- [x] Add `CFBundleIconFile` key to `Info.plist`
 
 ### Step 2 — Apple Developer Program
 - [ ] Enrol at [developer.apple.com](https://developer.apple.com) ($99/yr)
@@ -115,7 +108,6 @@ user-chosen folders (see **App Store** section below for details).
 ## GitHub Repository Polish
 
 ### Trust & security
-- [x] Add `SECURITY.md` — responsible disclosure policy and contact email
 - [ ] Add **notarization** to CI (secrets in Step 3 above) — this is what makes the DMG open
   without any warning on personal Macs running default Gatekeeper settings ("identified developers")
 - [ ] Document the **ad-hoc fallback** clearly in README for users who download before notarization
@@ -139,14 +131,6 @@ user-chosen folders (see **App Store** section below for details).
 - [ ] Add additional screenshots to `docs/screenshots/` — progress view, backup history, dark mode
   (GitHub shows these in the repo and they improve click-through from search results)
 
-### Release page quality
-- [x] Write a release description template in `.github/release_template.md` — shown in the
-  GitHub Release body alongside the auto-extracted CHANGELOG notes:
-  - Download instructions (DMG → drag to Applications)
-  - "If macOS says the app is from an unidentified developer" workaround (right-click → Open)
-  - Shell script download link as an alternative
-  - System requirements (macOS 13+, Apple Silicon or Intel)
-
 ---
 
 ## Wireless ADB Support
@@ -169,131 +153,6 @@ In both cases the device shows up in `adb devices` as `<ip>:<port>` (e.g. `192.1
 The `:` in the serial is already handled correctly by `sanitize_name()` in the shell script.
 
 ---
-
-### Step 1 — `AndroidDevice` model (`Models.swift`)
-
-- [x] Add a computed property to detect wireless vs USB:
-  ```swift
-  var isWireless: Bool { serial.contains(":") }
-  ```
-  No stored property needed — the serial format is the source of truth.
-
----
-
-### Step 2 — `DeviceManager` (`DeviceManager.swift`)
-
-- [x] Add `@Published var savedWirelessAddresses: [String]` — persisted in `UserDefaults`
-  under key `"wirelessAddresses"`. Loaded in `init()`, saved whenever the list changes.
-
-- [x] Add `func connect(address: String) async -> String?`:
-  Runs `adb connect <address>`, returns the normalised `ip:port` serial on success or `nil`
-  on failure. Parse the `adb connect` output:
-  - `"connected to 192.168.1.10:5555"` → success
-  - `"already connected"` → success
-  - `"cannot connect"` / `"failed"` → failure
-  ```swift
-  func connect(address: String) async -> String? {
-      guard let output = await shell(adbPath, args: ["connect", address]) else { return nil }
-      let ok = output.contains("connected to") || output.contains("already connected")
-      return ok ? normaliseAddress(address) : nil
-  }
-  // Normalises "192.168.1.10" → "192.168.1.10:5555" (appends default port if missing)
-  private func normaliseAddress(_ raw: String) -> String {
-      raw.contains(":") ? raw : "\(raw):5555"
-  }
-  ```
-
-- [x] Add `func pair(address: String, code: String) async -> Bool`:
-  Runs `adb pair <address> <code>` (Android 11+ Wireless Debugging pairing step).
-  Returns `true` if output contains `"Successfully paired"`.
-
-- [x] Add `func disconnect(serial: String) async`:
-  Runs `adb disconnect <serial>`. Remove the serial from `savedWirelessAddresses`.
-
-- [x] Update `poll()` to **auto-reconnect** saved addresses each cycle:
-  ```swift
-  private func poll() async {
-      // Re-connect any saved addresses not currently online
-      let currentSerials = Set((await runAdbDevices()))
-      for addr in savedWirelessAddresses where !currentSerials.contains(addr) {
-          _ = await shell(adbPath, args: ["connect", addr])
-      }
-      // Then do the normal device list update
-      let serials = await runAdbDevices()
-      …
-  }
-  ```
-  This silently reconnects after phone reboots, WiFi drops, or app restarts.
-
----
-
-### Step 3 — `DeviceSectionView` (`Views/DeviceSectionView.swift`)
-
-- [x] Update `deviceRow(_:)` to show a wifi vs USB icon:
-  ```swift
-  Image(systemName: device.isWireless ? "wifi" : "cable.connector")
-      .foregroundStyle(.secondary)
-      .font(.caption)
-  ```
-
-- [x] Hide the "USB mode should be set to File Transfer" reminder for wireless-only setups:
-  ```swift
-  if devices.contains(where: { !$0.isWireless }) {
-      // show USB reminder
-  }
-  ```
-
-- [x] Add a **"Connect wirelessly"** expandable section below the device list (or in the
-  "no device" state alongside the USB guide). It needs:
-  - A `TextField` for the IP address (or `ip:port`). Label: `"IP address  e.g. 192.168.1.10"`
-  - A `Button("Connect")` that calls `DeviceManager.connect(address:)` and adds the address
-    to `savedWirelessAddresses` on success.
-  - An inline error label shown on failure: `"Could not connect — check the address and that
-    Wireless Debugging is enabled on the phone."`
-  - A `Button("Pair…")` that opens the pairing sheet (Step 4 below) for Android 11+.
-  - For each connected wireless device in the list, a small `Button("Disconnect")` that calls
-    `DeviceManager.disconnect(serial:)` and removes it from saved addresses.
-
-- [x] Add a **"Saved wireless devices"** sub-list: when `savedWirelessAddresses` is non-empty
-  and the device is not currently connected, show it greyed-out with a retry spinner so the
-  user knows the app is trying to reconnect.
-
----
-
-### Step 4 — Pairing sheet for Android 11+ Wireless Debugging (optional but polished)
-
-Android 11+ has a separate pairing flow before connecting. The app should guide the user
-through it. This is a separate sheet modal:
-
-- [x] Create `WirelessPairingSheet.swift`:
-  - Two `TextField` fields: pairing address (`ip:port`) and 6-digit code.
-  - Instructions: *"On your Pixel: Settings → Developer options → Wireless debugging →
-    Pair device with pairing code. Enter the address and 6-digit code shown there."*
-  - A `Button("Pair & Connect")` that:
-    1. Calls `DeviceManager.pair(address:code:)` — `adb pair <ip>:<port> <code>`
-    2. On success, calls `DeviceManager.connect(address:)` with the **connection** port
-       (different from the pairing port — show the user they need both).
-    3. Saves the connection address to `savedWirelessAddresses`.
-  - Show success / failure inline.
-
----
-
-### Step 5 — User-facing guide copy
-
-- [x] Update the "No device detected" banner in `DeviceSectionView` to mention wireless as an
-  alternative to USB. Add a second tab or second expandable section:
-  **"USB setup"** (existing steps) and **"Wireless setup"** (new steps):
-  1. Settings → About phone → tap Build number 7× (same as USB)
-  2. Settings → System → Developer options → Wireless debugging → enable
-  3. Tap "Pair device with pairing code", enter the shown address + code in the app
-  4. (TCP/IP mode alternative) Connect USB once, then in Terminal: `adb tcpip 5555`, unplug
-
----
-
-### Step 6 — `UserDefaults` key
-
-- [x] Key: `"wirelessAddresses"` — `[String]` array of `ip:port` strings.
-  These are re-connected silently every poll cycle and survive app restarts.
 
 ---
 
