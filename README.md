@@ -2,7 +2,7 @@
 
 > Resumable, lossless Android-to-macOS media backup — native macOS app + shell script powered by `adb`.
 
-Back up your entire Pixel (or any Android) photo library to your Mac over USB. Files are **never altered, renamed, or re-encoded**. Re-running skips already-copied files. Nothing is ever deleted from your Mac.
+Back up your entire Pixel (or any Android) photo library to your Mac over USB or Wi-Fi. Files are **never altered, renamed, or re-encoded**. Re-running skips already-copied files. Nothing is ever deleted from your Mac.
 
 ![Pixel Backup UI](docs/screenshots/ui-config.png)
 
@@ -11,6 +11,7 @@ Back up your entire Pixel (or any Android) photo library to your Mac over USB. F
 ## Features
 
 - **Native macOS app** — SwiftUI window with device picker, folder selection, live progress, speed & ETA, backup history, and system notifications
+- **Wireless ADB** — connect over Wi-Fi by entering the device IP; saved addresses auto-reconnect on every launch. Supports Android Wireless Debugging pairing (no USB required at all)
 - **Menu bar extra** — monitor and open new backups from the menu bar without keeping a window open
 - **Multiple independent windows** — back up a second device simultaneously in a separate window (`⌘N`)
 - **Resumable transfers** — re-run at any time; files already on disk are skipped by size match
@@ -20,7 +21,7 @@ Back up your entire Pixel (or any Android) photo library to your Mac over USB. F
 - **Disk space guard** — checks free space before and during copy; warns and aborts near critical thresholds
 - **USB debugging guide** — in-app step-by-step instructions shown when no device is detected
 - **Drag-and-drop destination** — drop a folder onto the window to set the backup target
-- **Custom folder selection** — toggle built-in folders (DCIM, Pictures, Download, Music, Backups, Movies) or add any custom Android path
+- **Custom folder selection** — toggle built-in folders (DCIM, Pictures, Documents, Download, Music, Backups, Movies) or add any custom Android path
 - **Localized** — English, German, Spanish, French
 - **Shell script** — full `pixel_backup.sh` included for headless/cron use with all options exposed as environment variables
 
@@ -33,7 +34,7 @@ Back up your entire Pixel (or any Android) photo library to your Mac over USB. F
 | macOS | 13 Ventura or later |
 | Architecture | Apple Silicon and Intel |
 | Swift | 5.9+ (Xcode Command Line Tools) |
-| Android | Any device with USB debugging enabled |
+| Android | Any device with USB or Wireless debugging enabled |
 
 ---
 
@@ -50,8 +51,8 @@ Download the latest `PixelBackup-x.x.x.dmg` from the [Releases](../../releases) 
 ### macOS App — build from source
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/pixel-backup.git
-cd pixel-backup/PixelBackupApp
+git clone https://github.com/JavanXD/pixel_backup.git
+cd pixel_backup/PixelBackupApp
 # Download the bundled adb binary (not stored in git)
 curl -fsSL -o /tmp/pt.zip https://dl.google.com/android/repository/platform-tools-latest-darwin.zip
 unzip -j /tmp/pt.zip platform-tools/adb -d Sources/PixelBackup/Resources/
@@ -100,6 +101,7 @@ Default folders scanned on the device:
 |---|---|
 | `DCIM` | Camera photos and videos |
 | `Pictures` | Screenshots, saved images |
+| `Documents` | Documents and files |
 | `Download` | Downloaded files |
 | `Music` | Music files |
 | `Backups` | App backups |
@@ -157,7 +159,8 @@ pixel-backup/
 │       ├── Models.swift          # AndroidDevice, BackupState, RemoteFolder, …
 │       ├── L10n.swift            # Type-safe NSLocalizedString helper
 │       └── Views/
-│           ├── DeviceSectionView.swift      # Device picker + USB guide
+│           ├── DeviceSectionView.swift      # Device picker, wireless connect, USB guide
+│           ├── WirelessPairingSheet.swift   # Android Wireless Debugging pairing flow
 │           ├── FolderSelectionView.swift    # Folder toggles + custom folders
 │           ├── DestinationPickerView.swift  # Path picker + drag-drop + free space
 │           ├── BackupProgressSection.swift  # Live progress bar, speed, ETA, elapsed
@@ -186,12 +189,25 @@ The app ships in four languages. To add a new language:
 
 ## Troubleshooting
 
-### No device detected
+### No device detected (USB)
 
 - Enable **USB debugging** on the phone (Settings → About phone → tap Build number 7 times → Developer options → USB debugging)
 - Set USB mode to **File Transfer** (tap the USB notification on the phone)
 - Accept the **Allow USB debugging** prompt on the phone
 - Try a different cable (charge-only cables won't work)
+
+### No device detected (wireless)
+
+Use the **"Connect wirelessly"** section in the app and enter the phone's IP address (`192.168.1.x`). Two ways to prepare the phone:
+
+**Option A — Wireless Debugging (no USB needed):**
+1. Settings → Developer options → **Wireless debugging** → enable
+2. Tap **"Pair device with pairing code"** — enter the address and code in the app's pairing sheet
+3. After pairing, enter the IP:port shown on the main Wireless debugging screen
+
+**Option B — TCP/IP mode (USB once, then wireless):**
+1. Connect USB, then in Terminal: `adb tcpip 5555`
+2. Unplug USB — enter the phone's IP address in the app (`192.168.1.x`)
 
 ### `Missing command: adb`
 
@@ -218,6 +234,10 @@ PRECHECK_FREE_SPACE=2 ./pixel_backup.sh            # full estimate before copy
 ## Changelog
 
 ### Unreleased
+- **Wireless ADB** — connect over Wi-Fi, auto-reconnect saved addresses, Android Wireless Debugging pairing sheet
+- `Documents` added as a default copy folder
+- App icon — custom design bundled as `AppIcon.icns`
+- `build.sh` auto-installs to `/Applications` after every build
 - Real-time transfer speed (MB/s) and ETA in progress view
 - Elapsed time counter and current filename during backup
 - Free disk space indicator on destination picker
@@ -232,7 +252,6 @@ PRECHECK_FREE_SPACE=2 ./pixel_backup.sh            # full estimate before copy
 - USB debugging step-by-step guide shown inline when no device is found
 - Music and Backups added as default copy folders; custom folder paths via UI
 - Drag-and-drop destination folder onto window or picker row
-- Dark/light mode QA pass
 - English, German, Spanish, French localization
 - `--help` flag on shell script prints all parameters
 - Dated backup folder names (`YYYY-MM-DD_DeviceName_Serial`)
@@ -306,8 +325,6 @@ Contributions are welcome. Please:
 ### Known gaps / good first issues
 
 - [ ] Optional checksum verification (md5/sha1) after copy
-- [ ] App icon — 1024×1024 PNG → `AppIcon.icns` → asset catalogue
-- [ ] Wireless ADB support (`adb connect <ip>:<port>`)
 - [ ] Scheduled / automatic backups via `LaunchAgent`
 
 ---

@@ -8,6 +8,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **Wireless ADB support** — connect to any Android device over Wi-Fi without a USB cable:
+  - "Connect wirelessly" expandable section in the device panel: enter an IP address and tap Connect
+  - Saved addresses persist across app restarts and auto-reconnect every poll cycle
+  - Android Wireless Debugging pairing flow (Settings → Developer options → Wireless debugging → Pair device with pairing code) via a dedicated `WirelessPairingSheet`
+  - Connected wireless devices show a Wi-Fi icon; USB devices show a cable icon
+  - Disconnect button per wireless device; offline saved addresses shown as "reconnecting…" with a remove button
+- `Documents` added as a default copy folder
+- App icon — custom 1024×1024 design with all required macOS sizes bundled as `AppIcon.icns`
+- `build.sh` now auto-installs the built `.app` to `/Applications` after every build (removes the old copy first to prevent nesting)
 - Real-time transfer speed (MB/s) and ETA displayed in the progress view
 - Elapsed time counter (`Xm Ys elapsed`) during active backups
 - Current filename shown live under the progress bar while copying

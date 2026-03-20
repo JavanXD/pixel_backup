@@ -43,7 +43,7 @@ The script exits with code `0` (success), `130` (cancelled via SIGINT), or non-z
 │  │              │   │                │                  │
 │  │ adb devices  │   │ Process()      │                  │
 │  │ every 4s     │   │ stdout pipe    │                  │
-│  │              │   │ state machine  │                  │
+│  │ connect/pair │   │ state machine  │                  │
 │  └──────┬───────┘   └───────┬────────┘                  │
 │         │ [AndroidDevice]   │ [BackupState, Progress]   │
 │         └─────────┬─────────┘                           │
@@ -62,7 +62,13 @@ The script exits with code `0` (success), `130` (cancelled via SIGINT), or non-z
 ### Core classes
 
 **`DeviceManager`** — `@MainActor ObservableObject`
-Resolves `adb` at startup (bundled → Homebrew Apple Silicon → Homebrew Intel → PATH). Runs `adb devices` on a 4-second timer and fetches each device's model name via `adb shell getprop ro.product.model`. Sets `adbAvailable` which gates the whole UI.
+Resolves `adb` at startup (bundled → Homebrew Apple Silicon → Homebrew Intel → PATH). Runs `adb devices` on a 4-second timer (`poll()`) and fetches each device's model name via `adb shell getprop ro.product.model`. Sets `adbAvailable` which gates the whole UI.
+
+Wireless ADB methods:
+- `connect(address:)` — runs `adb connect <ip:port>`, persists the address in `UserDefaults` on success
+- `pair(address:code:)` — runs `adb pair <ip:port> <code>` for the Android Wireless Debugging pairing flow
+- `disconnect(serial:)` — runs `adb disconnect` and removes the address from the saved list
+- `savedWirelessAddresses` — persisted array of known addresses; `poll()` silently attempts reconnect for any that are offline
 
 **`BackupManager`** — `@MainActor ObservableObject`
 Owns the `Process` that runs `pixel_backup.sh`. Feeds configuration as environment variables (`DEVICE_SERIAL`, `DEST_ROOT_BASE`, `REMOTE_DIRS_CSV`, etc.). Reads stdout/stderr through a `Pipe` with a `readabilityHandler`, splits on newlines, and feeds each line to `LogParser`. Publishes:
@@ -153,7 +159,7 @@ Cancel is implemented by calling `process.interrupt()` which sends SIGINT to the
 PixelBackupApp/
 ├── Package.swift                     SPM manifest (macOS 13+, defaultLocalization: "en")
 ├── PixelBackup.entitlements          sandbox=false, cs.disable-library-validation
-├── build.sh                          assemble + ad-hoc or Developer ID sign
+├── build.sh                          assemble + ad-hoc or Developer ID sign + auto-install to /Applications
 ├── notarize.sh                       xcrun notarytool submit + staple
 └── Sources/PixelBackup/
     ├── Info.plist                    bundle metadata, usage descriptions
@@ -163,7 +169,7 @@ PixelBackupApp/
     ├── Models.swift                  AndroidDevice, BackupState, BackupProgress,
     │                                 BackupSummary, LogLine, RemoteFolder
     ├── LogParser.swift               parses structured script output
-    ├── DeviceManager.swift           adb resolution, device list, auto-refresh
+    ├── DeviceManager.swift           adb resolution, device list, wireless connect/pair/disconnect, auto-reconnect
     ├── BackupManager.swift           subprocess, log streaming, state machine,
     │                                 rolling speed + ETA, cancel
     ├── NotificationManager.swift     UNUserNotificationCenter wrapper
@@ -176,7 +182,8 @@ PixelBackupApp/
     │   ├── adb                       bundled Google platform-tools binary
     │   └── pixel_backup.sh           bundled backup script
     └── Views/
-        ├── DeviceSectionView.swift   device picker, USB mode reminder
+        ├── DeviceSectionView.swift   device picker, wireless connect section, offline device list, USB mode reminder
+        ├── WirelessPairingSheet.swift Android Wireless Debugging pairing flow (two-step: pair + connect)
         ├── FolderSelectionView.swift DCIM / Pictures / Movies / Download toggles
         ├── DestinationPickerView.swift NSOpenPanel + drag-and-drop folder target
         ├── HintBannerView.swift      dismissable HINT/WARN banners
@@ -192,7 +199,7 @@ PixelBackupApp/
 
 ## UI screens
 
-**Config** — device picker (auto-refreshes, USB reminder), folder toggles (DCIM / Pictures / Movies / Download, persisted), destination folder (NSOpenPanel or drag-and-drop onto the window), Start Backup button.
+**Config** — device picker (auto-refreshes; wireless devices show a Wi-Fi icon, USB devices a cable icon), "Connect wirelessly" expandable section (IP entry, Connect button, Android Wireless Debugging pairing sheet), folder toggles (DCIM / Pictures / Documents / Movies / Download, persisted), destination folder (NSOpenPanel or drag-and-drop onto the window), Start Backup button.
 
 **Progress** — live log stream, progress bar, counters (seen / copied / skipped / failed), GB copied, rolling MB/s and ETA, dismissable hint banners, Cancel button. Backup continues even if the window is closed — status stays visible in the menu bar.
 
