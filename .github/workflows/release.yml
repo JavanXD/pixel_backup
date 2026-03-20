@@ -11,6 +11,8 @@ jobs:
   build-and-release:
     name: Build DMG & publish release
     runs-on: macos-15          # Apple Silicon runner (macOS 15 Sequoia)
+    permissions:
+      contents: write           # required to create GitHub Releases
 
     steps:
       - name: Checkout
@@ -182,15 +184,16 @@ jobs:
 
       # ── Publish GitHub Release ─────────────────────────────────────────────
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2.6.1
-        with:
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: "Pixel Backup ${{ steps.version.outputs.tag }}"
-          body_path: /tmp/release_notes.md
-          draft: false
-          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
-          files: |
-            ${{ steps.dmg.outputs.path }}
-            pixel_backup.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          DMG: ${{ steps.dmg.outputs.path }}
+        run: |
+          PRERELEASE_FLAG=""
+          [[ "$TAG" == *-* ]] && PRERELEASE_FLAG="--prerelease"
+          gh release create "$TAG" \
+            --title "Pixel Backup $TAG" \
+            --notes-file /tmp/release_notes.md \
+            $PRERELEASE_FLAG \
+            "$DMG" \
+            pixel_backup.sh
