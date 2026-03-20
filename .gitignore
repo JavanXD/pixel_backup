@@ -1,0 +1,39 @@
+# Cursor / VS Code workspace file
+*.code-workspace
+
+# Swift / SPM
+.build/
+*.o
+*.d
+*.swp
+.swiftpm/
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Build artefacts
+PixelBackup.app/
+*.dmg
+*.zip
+
+# Bundled adb binary — downloaded at build time (see CI workflow)
+PixelBackupApp/Sources/PixelBackup/Resources/adb
+
+# Logs and local transfer metadata (never commit real backup data)
+*.log
+.transfer_meta/
+
+# Secrets
+.env
+*.p8
+*.p12
+*.cer

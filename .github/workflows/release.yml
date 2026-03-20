@@ -1,0 +1,186 @@
+name: Release
+
+# Triggered by a version tag, e.g.:
+#   git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-and-release:
+    name: Build DMG & publish release
+    runs-on: macos-14          # Apple Silicon runner (macOS 14 Sonoma)
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Derive version from tag ────────────────────────────────────────────
+      - name: Set version
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"   # strip leading "v"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$GITHUB_REF_NAME"   >> "$GITHUB_OUTPUT"
+
+      # ── Download adb ───────────────────────────────────────────────────────
+      - name: Download adb
+        run: |
+          curl -fsSL -o /tmp/pt.zip \
+            https://dl.google.com/android/repository/platform-tools-latest-darwin.zip
+          unzip -j /tmp/pt.zip platform-tools/adb \
+            -d PixelBackupApp/Sources/PixelBackup/Resources/
+          chmod +x PixelBackupApp/Sources/PixelBackup/Resources/adb
+
+      # ── Build release binary ───────────────────────────────────────────────
+      - name: Build (release)
+        run: swift build -c release --package-path PixelBackupApp
+
+      # ── Assemble .app bundle ───────────────────────────────────────────────
+      - name: Assemble PixelBackup.app
+        run: |
+          APP=PixelBackup.app
+          CONTENTS="$APP/Contents"
+          mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
+
+          cp PixelBackupApp/.build/release/PixelBackup "$CONTENTS/MacOS/PixelBackup"
+          cp PixelBackupApp/Sources/PixelBackup/Info.plist "$CONTENTS/Info.plist"
+
+          # Bundled resources (adb + pixel_backup.sh) — prefer the SPM-built bundle
+          BUILT_RES="PixelBackupApp/.build/release/PixelBackup_PixelBackup.bundle/Contents/Resources"
+          if [ -d "$BUILT_RES" ]; then
+            cp -r "$BUILT_RES/"* "$CONTENTS/Resources/"
+          else
+            cp PixelBackupApp/Sources/PixelBackup/Resources/adb           "$CONTENTS/Resources/adb"
+            cp PixelBackupApp/Sources/PixelBackup/Resources/pixel_backup.sh "$CONTENTS/Resources/pixel_backup.sh"
+          fi
+          chmod +x "$CONTENTS/Resources/adb"
+          chmod +x "$CONTENTS/Resources/pixel_backup.sh"
+
+      # ── Code sign (Developer ID if secrets present, else ad-hoc) ──────────
+      - name: Import signing certificate
+        if: ${{ secrets.DEVELOPER_ID_CERT_P12 != '' }}
+        env:
+          P12_BASE64:  ${{ secrets.DEVELOPER_ID_CERT_P12 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain"
+          echo "$P12_BASE64" | base64 --decode > /tmp/cert.p12
+          security create-keychain  -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain  -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import /tmp/cert.p12 -k "$KEYCHAIN_PATH" \
+            -P "$P12_PASSWORD" -T /usr/bin/codesign
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+      - name: Sign app (Developer ID)
+        if: ${{ secrets.DEVELOPER_ID_CERT_P12 != '' }}
+        env:
+          DEVELOPER_ID: ${{ secrets.DEVELOPER_ID_APP }}
+          ENTITLEMENTS: PixelBackupApp/PixelBackup.entitlements
+        run: |
+          codesign --force --options runtime \
+            --entitlements "$ENTITLEMENTS" \
+            --sign "$DEVELOPER_ID" \
+            PixelBackup.app/Contents/Resources/adb
+          codesign --force --options runtime --deep \
+            --entitlements "$ENTITLEMENTS" \
+            --sign "$DEVELOPER_ID" \
+            PixelBackup.app
+          codesign --verify --deep --strict --verbose=2 PixelBackup.app
+
+      - name: Sign app (ad-hoc fallback)
+        if: ${{ secrets.DEVELOPER_ID_CERT_P12 == '' }}
+        run: |
+          codesign --force --deep --sign - \
+            --entitlements PixelBackupApp/PixelBackup.entitlements \
+            PixelBackup.app
+          echo "⚠️  Ad-hoc signed — users must right-click → Open on first launch"
+
+      # ── Notarize (only when Developer ID cert is available) ───────────────
+      - name: Notarize app
+        if: ${{ secrets.DEVELOPER_ID_CERT_P12 != '' && secrets.APPLE_ID != '' }}
+        env:
+          APPLE_ID:       ${{ secrets.APPLE_ID }}
+          NOTARY_TEAM:    ${{ secrets.NOTARY_TEAM }}
+          NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+        run: |
+          ditto -c -k --keepParent PixelBackup.app /tmp/PixelBackup-notarize.zip
+          xcrun notarytool submit /tmp/PixelBackup-notarize.zip \
+            --apple-id   "$APPLE_ID" \
+            --team-id    "$NOTARY_TEAM" \
+            --password   "$NOTARY_PASSWORD" \
+            --wait
+          xcrun stapler staple PixelBackup.app
+          spctl --assess --type execute --verbose PixelBackup.app
+
+      # ── Create DMG ─────────────────────────────────────────────────────────
+      - name: Install create-dmg
+        run: brew install create-dmg
+
+      - name: Create DMG
+        id: dmg
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DMG="PixelBackup-${VERSION}.dmg"
+
+          # create-dmg exits non-zero if no code-signing is done but the app
+          # is already signed ad-hoc; use || true to not fail the step.
+          create-dmg \
+            --volname "PixelBackup" \
+            --window-pos 200 120 \
+            --window-size 660 400 \
+            --icon-size 128 \
+            --icon "PixelBackup.app" 160 185 \
+            --hide-extension "PixelBackup.app" \
+            --app-drop-link 500 185 \
+            "$DMG" \
+            PixelBackup.app || true
+
+          # Fallback: hdiutil if create-dmg produced nothing
+          if [ ! -f "$DMG" ]; then
+            hdiutil create -volname PixelBackup \
+              -srcfolder PixelBackup.app \
+              -ov -format UDZO "$DMG"
+          fi
+
+          echo "path=$DMG" >> "$GITHUB_OUTPUT"
+          echo "name=$DMG" >> "$GITHUB_OUTPUT"
+          ls -lh "$DMG"
+
+      # ── Generate release notes from CHANGELOG + template ─────────────────
+      - name: Extract release notes
+        id: notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Pull everything between the first two version headings in CHANGELOG.md
+          CHANGELOG=$(awk '
+            /^## \[/ { if (found) exit; found=1; next }
+            found { print }
+          ' CHANGELOG.md)
+
+          # Substitute version placeholder in template and append changelog
+          sed "s/{version}/$VERSION/g" .github/release_template.md > /tmp/release_notes.md
+          printf '\n---\n\n## Changes in this release\n\n' >> /tmp/release_notes.md
+          echo "$CHANGELOG" >> /tmp/release_notes.md
+          cat /tmp/release_notes.md
+
+      # ── Publish GitHub Release ─────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "Pixel Backup ${{ steps.version.outputs.tag }}"
+          body_path: /tmp/release_notes.md
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
+          files: |
+            ${{ steps.dmg.outputs.path }}
+            pixel_backup.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,62 @@
+/* ── Estado de copia de seguridad ── */
+"backup.state.ready"           = "Listo";
+"backup.state.connecting"      = "Conectando…";
+"backup.state.scanning"        = "Escaneando %@…";
+"backup.state.copying"         = "Copiando archivos…";
+"backup.state.retrying"        = "Reintentando archivos fallidos…";
+"backup.state.finishing"       = "Finalizando…";
+"backup.state.done"            = "Completado";
+"backup.state.failed"          = "Error: %@";
+"backup.state.cancelled"       = "Cancelado";
+
+/* ── Notificaciones ── */
+"notification.backup.title.success"       = "Copia de seguridad completada";
+"notification.backup.title.with_errors"   = "Copia de seguridad completada (con errores)";
+/* %1$d = número de archivos, %2$.1f = GB */
+"notification.backup.body.success"        = "%1$d archivos copiados · %2$.1f GB";
+/* %1$d = número de archivos, %2$.1f = GB, %3$d = archivos fallidos */
+"notification.backup.body.with_errors"    = "%1$d archivos copiados · %2$.1f GB · %3$d fallidos";
+
+/* ── Dispositivo ── */
+"device.section.title"                    = "Dispositivo";
+"device.no_devices.title"                 = "No se encontraron dispositivos";
+"device.no_devices.subtitle"             = "Conecte su teléfono por USB y asegúrese de que la depuración USB esté activada.";
+"device.usb_mode_reminder"               = "El modo USB del teléfono debe estar en **Transferencia de archivos**, no en Carga.";
+
+/* ── Selección de carpetas ── */
+"folders.section.title"                   = "Copiar desde";
+"folders.none_selected_warning"          = "Seleccione al menos una carpeta para copiar.";
+
+/* ── Selector de destino ── */
+"destination.section.title"              = "Guardar en";
+"destination.choose_button"             = "Elegir…";
+"destination.hint"                       = "Arrastre una carpeta aquí o use Elegir. Cada copia se guarda en una subcarpeta con fecha: AAAA-MM-DD_NombreDispositivo_Serial/";
+"destination.drop_label"                 = "Suelte la carpeta aquí para establecer el destino";
+
+/* ── Progreso ── */
+"progress.cancel_button"                 = "Cancelar transferencia";
+"progress.cancelled_info"               = "Transferencia cancelada. Vuelva a abrir la app para reanudar — los archivos ya copiados se omitirán.";
+
+/* ── Resumen ── */
+"summary.title"                          = "Copia de seguridad completada";
+"summary.errors_subtitle"               = "%d archivo(s) no se pudieron copiar — consulte el registro de errores.";
+"summary.stat.copied_this_run"          = "Esta sesión";
+"summary.stat.all_time"                 = "Total acumulado";
+"summary.stat.failed"                   = "Fallidos";
+"summary.stat.destination"             = "Destino";
+"summary.open_folder_button"            = "Abrir carpeta";
+"summary.view_log_button"               = "Ver registro";
+"summary.new_backup_button"             = "Nueva copia";
+
+/* ── Guía de configuración ── */
+"setup.title"                            = "adb no encontrado";
+"setup.copy_command_button"             = "Copiar comando de instalación";
+"setup.retry_button"                     = "Reintentar detección";
+
+/* ── Historial ── */
+"history.title"                          = "Historial de copias";
+"history.empty.title"                   = "No se encontraron copias";
+"history.empty.subtitle"               = "Las copias aparecerán aquí después del primer uso.";
+"history.open_in_finder_button"         = "Abrir en Finder";
+"history.done_button"                   = "Listo";
+"history.open_button"                   = "Abrir";

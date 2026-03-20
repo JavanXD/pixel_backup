@@ -1,0 +1,62 @@
+/* ── Backup state labels ── */
+"backup.state.ready"           = "Ready";
+"backup.state.connecting"      = "Connecting…";
+"backup.state.scanning"        = "Scanning %@…";
+"backup.state.copying"         = "Copying files…";
+"backup.state.retrying"        = "Retrying failed files…";
+"backup.state.finishing"       = "Finishing…";
+"backup.state.done"            = "Done";
+"backup.state.failed"          = "Failed: %@";
+"backup.state.cancelled"       = "Cancelled";
+
+/* ── Notifications ── */
+"notification.backup.title.success"       = "Backup Complete";
+"notification.backup.title.with_errors"   = "Backup Complete (with errors)";
+/* %1$d = file count, %2$.1f = GB */
+"notification.backup.body.success"        = "%1$d files copied · %2$.1f GB";
+/* %1$d = file count, %2$.1f = GB, %3$d = failed count */
+"notification.backup.body.with_errors"    = "%1$d files copied · %2$.1f GB · %3$d failed";
+
+/* ── Device section ── */
+"device.section.title"                    = "Device";
+"device.no_devices.title"                 = "No devices found";
+"device.no_devices.subtitle"             = "Connect your phone via USB and ensure USB debugging is enabled.";
+"device.usb_mode_reminder"               = "Phone USB mode should be set to **File Transfer**, not Charging.";
+
+/* ── Folder selection ── */
+"folders.section.title"                   = "Copy from";
+"folders.none_selected_warning"          = "Select at least one folder to copy.";
+
+/* ── Destination picker ── */
+"destination.section.title"              = "Save to";
+"destination.choose_button"             = "Choose…";
+"destination.hint"                       = "Drag a folder here or use Choose. Each backup is saved in a dated subfolder: YYYY-MM-DD_DeviceName_Serial/";
+"destination.drop_label"                 = "Drop folder here to set destination";
+
+/* ── Progress ── */
+"progress.cancel_button"                 = "Cancel Transfer";
+"progress.cancelled_info"               = "Transfer cancelled. Rerun the app to resume — already-copied files will be skipped.";
+
+/* ── Summary card ── */
+"summary.title"                          = "Backup Complete";
+"summary.errors_subtitle"               = "%d file(s) could not be copied — see failures log.";
+"summary.stat.copied_this_run"          = "Copied this run";
+"summary.stat.all_time"                 = "All-time total";
+"summary.stat.failed"                   = "Failed";
+"summary.stat.destination"             = "Destination";
+"summary.open_folder_button"            = "Open Folder";
+"summary.view_log_button"               = "View Log";
+"summary.new_backup_button"             = "New Backup";
+
+/* ── Setup guide ── */
+"setup.title"                            = "adb Not Found";
+"setup.copy_command_button"             = "Copy install command";
+"setup.retry_button"                     = "Retry Detection";
+
+/* ── History ── */
+"history.title"                          = "Backup History";
+"history.empty.title"                   = "No backups found";
+"history.empty.subtitle"               = "Backups will appear here after your first run.";
+"history.open_in_finder_button"         = "Open in Finder";
+"history.done_button"                   = "Done";
+"history.open_button"                   = "Open";

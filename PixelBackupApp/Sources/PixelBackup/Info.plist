@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>Pixel Backup</string>
+    <key>CFBundleName</key>
+    <string>PixelBackup</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.pixelbackup.app</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>PixelBackup</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2026 Pixel Backup. All rights reserved.</string>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSSupportsAutomaticGraphicsSwitching</key>
+    <true/>
+
+    <!-- USB/file-system access descriptions (required on macOS 13+) -->
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>Pixel Backup needs access to your Desktop to save backup files.</string>
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>Pixel Backup needs access to your Documents folder to save backup files.</string>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>Pixel Backup needs access to your Downloads folder to save backup files.</string>
+
+    <!-- Disable App Transport Security — only needed if updating adb over HTTP -->
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <false/>
+    </dict>
+
+    <!-- Suppress Dock appearance while running in background -->
+    <key>LSUIElement</key>
+    <false/>
+</dict>
+</plist>

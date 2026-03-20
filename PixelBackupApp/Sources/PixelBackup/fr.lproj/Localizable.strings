@@ -1,0 +1,62 @@
+/* ── État de la sauvegarde ── */
+"backup.state.ready"           = "Prêt";
+"backup.state.connecting"      = "Connexion…";
+"backup.state.scanning"        = "Analyse de %@…";
+"backup.state.copying"         = "Copie des fichiers…";
+"backup.state.retrying"        = "Nouvelle tentative pour les fichiers échoués…";
+"backup.state.finishing"       = "Finalisation…";
+"backup.state.done"            = "Terminé";
+"backup.state.failed"          = "Échec : %@";
+"backup.state.cancelled"       = "Annulé";
+
+/* ── Notifications ── */
+"notification.backup.title.success"       = "Sauvegarde terminée";
+"notification.backup.title.with_errors"   = "Sauvegarde terminée (avec erreurs)";
+/* %1$d = nombre de fichiers, %2$.1f = Go */
+"notification.backup.body.success"        = "%1$d fichiers copiés · %2$.1f Go";
+/* %1$d = nombre de fichiers, %2$.1f = Go, %3$d = échecs */
+"notification.backup.body.with_errors"    = "%1$d fichiers copiés · %2$.1f Go · %3$d échoué(s)";
+
+/* ── Appareil ── */
+"device.section.title"                    = "Appareil";
+"device.no_devices.title"                 = "Aucun appareil trouvé";
+"device.no_devices.subtitle"             = "Connectez votre téléphone via USB et assurez-vous que le débogage USB est activé.";
+"device.usb_mode_reminder"               = "Le mode USB du téléphone doit être réglé sur **Transfert de fichiers**, et non sur Charge.";
+
+/* ── Sélection des dossiers ── */
+"folders.section.title"                   = "Copier depuis";
+"folders.none_selected_warning"          = "Sélectionnez au moins un dossier à copier.";
+
+/* ── Sélecteur de destination ── */
+"destination.section.title"              = "Enregistrer dans";
+"destination.choose_button"             = "Choisir…";
+"destination.hint"                       = "Faites glisser un dossier ici ou utilisez Choisir. Chaque sauvegarde est enregistrée dans un sous-dossier daté : AAAA-MM-JJ_NomAppareil_Numéro/";
+"destination.drop_label"                 = "Déposer un dossier ici pour définir la destination";
+
+/* ── Progression ── */
+"progress.cancel_button"                 = "Annuler le transfert";
+"progress.cancelled_info"               = "Transfert annulé. Relancez l'app pour reprendre — les fichiers déjà copiés seront ignorés.";
+
+/* ── Récapitulatif ── */
+"summary.title"                          = "Sauvegarde terminée";
+"summary.errors_subtitle"               = "%d fichier(s) n'ont pas pu être copiés — consultez le journal des erreurs.";
+"summary.stat.copied_this_run"          = "Cette session";
+"summary.stat.all_time"                 = "Total cumulé";
+"summary.stat.failed"                   = "Échecs";
+"summary.stat.destination"             = "Destination";
+"summary.open_folder_button"            = "Ouvrir le dossier";
+"summary.view_log_button"               = "Voir le journal";
+"summary.new_backup_button"             = "Nouvelle sauvegarde";
+
+/* ── Guide de configuration ── */
+"setup.title"                            = "adb introuvable";
+"setup.copy_command_button"             = "Copier la commande d'installation";
+"setup.retry_button"                     = "Relancer la détection";
+
+/* ── Historique ── */
+"history.title"                          = "Historique des sauvegardes";
+"history.empty.title"                   = "Aucune sauvegarde trouvée";
+"history.empty.subtitle"               = "Les sauvegardes apparaîtront ici après la première utilisation.";
+"history.open_in_finder_button"         = "Ouvrir dans le Finder";
+"history.done_button"                   = "Terminé";
+"history.open_button"                   = "Ouvrir";
