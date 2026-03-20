@@ -192,14 +192,15 @@ struct ContentView: View {
     }
 
     private func loadLastBackup() {
+        let base = destRootBase
         Task.detached(priority: .utility) {
             let fm = FileManager.default
-            guard let items = try? fm.contentsOfDirectory(atPath: destRootBase) else { return }
+            guard let items = try? fm.contentsOfDirectory(atPath: base) else { return }
             let latest = items
                 .filter { $0.range(of: #"^\d{4}-\d{2}-\d{2}"#, options: .regularExpression) != nil }
                 .sorted(by: >).first
             guard let name = latest else { return }
-            let path = "\(destRootBase)/\(name)"
+            let path = "\(base)/\(name)"
             var record = BackupRecord(folderName: name, path: path)
             // Read from manifest for speed
             let manifestPath = "\(path)/.transfer_meta/manifest.tsv"
@@ -210,7 +211,8 @@ struct ContentView: View {
                 record.fileCount = lines.count
                 record.sizeBytes = bytes
             }
-            await MainActor.run { lastBackupRecord = record }
+            let finalRecord = record
+            await MainActor.run { lastBackupRecord = finalRecord }
         }
     }
 
