@@ -17,6 +17,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         setupStatusItem()
         observeCoordinator()
         rescueOffScreenWindows()
+
+        // Best-effort: show a dismissible update banner if a newer GitHub release exists.
+        UpdateChecker.shared.start()
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {

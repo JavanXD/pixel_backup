@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -7,6 +8,8 @@ struct ContentView: View {
 
     @Environment(\.openWindow) private var openWindow
 
+    @ObservedObject private var updateChecker = UpdateChecker.shared
+
     @State private var selectedSerial: String? = nil
     @AppStorage("destRootBase") private var destRootBase: String = "\(NSHomeDirectory())/Pictures/pixel_backup"
     @State private var folders: [RemoteFolder] = RemoteFolder.loadSaved()
@@ -15,14 +18,28 @@ struct ContentView: View {
     @State private var lastBackupRecord: BackupRecord? = nil
 
     var body: some View {
-        Group {
-            if !deviceManager.adbAvailable {
-                SetupGuideView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                mainContent
+        VStack(spacing: 12) {
+            if let banner = updateChecker.banner {
+                UpdateBannerView(
+                    banner: banner,
+                    onDismiss: { updateChecker.dismissCurrentBanner() },
+                    onOpenRelease: { NSWorkspace.shared.open(banner.releaseURL) }
+                )
+                .padding(.horizontal, 18)
+                .padding(.top, 12)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+
+            Group {
+                if !deviceManager.adbAvailable {
+                    SetupGuideView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    mainContent
+                }
             }
         }
+        .animation(.easeInOut(duration: 0.2), value: updateChecker.banner)
         .toolbar {
             // ── Leading: new window / tab ─────────────────────────────────
             ToolbarItem(placement: .navigation) {
