@@ -433,10 +433,13 @@
 
       <main id="main-content" class="hero">
         <section class="card">
-          <h2>Back up your Pixel to your Mac. For real.</h2>
+          <h2>Back up your Pixel to your Mac—fast, resumable, lossless.</h2>
           <p class="lead">
-            Pixel Backup is a simple way to copy your entire Android photo/video library to macOS
-            without re-encoding, without renaming, and without deleting anything.
+            Pixel Backup copies your entire Android photo/video library to macOS byte-for-byte with
+            <code class="inline">adb pull</code>—no re-encoding, no renaming, and no deletes. In the
+            motivation behind this project, transfers over <strong>140GB</strong> used to fail or take
+            over a day; with this resumable approach, typical backups finish in <strong>under 10 minutes</strong>
+            (in the author’s setup).
           </p>
 
           <div class="cta-row">
@@ -486,7 +489,7 @@
           <div class="caption">
             <h3 class="section-title" style="margin: 0 0 8px; font-size: 16px">What you get</h3>
             <div style="color: var(--muted); font-size: 14px">
-              Device picker, folder toggles, live progress, speed & ETA, and a backup history that is easy to browse by date.
+              Device picker, folder toggles, live progress, speed & ETA, and fast backup history (loads from <code class="inline">manifest.tsv</code>) that stays usable for huge backups.
             </div>
           </div>
         </aside>
