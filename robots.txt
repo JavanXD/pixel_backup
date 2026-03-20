@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# GitHub Pages canonical URL (update if you use a custom domain)
+Sitemap: https://javanxd.github.io/pixel_backup/sitemap.xml
+

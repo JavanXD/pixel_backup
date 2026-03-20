@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Pixel Backup for macOS</title>
+    <meta
+      name="description"
+      content="Resumable, lossless Android-to-macOS photo/video backup. Install a macOS app (DMG) or run a no-installer shell script powered by adb."
+    />
+    <meta name="robots" content="index,follow" />
+    <meta name="theme-color" content="#0b1020" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Pixel Backup for macOS" />
+    <meta
+      property="og:description"
+      content="Resumable, lossless Android-to-macOS backup (no re-encoding, no deletes)."
+    />
+    <meta
+      property="og:image"
+      content="./docs/screenshots/ui-config.png"
+    />
+    <meta
+      property="og:url"
+      content="https://javanxd.github.io/pixel_backup/"
+    />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Pixel Backup for macOS" />
+    <meta
+      name="twitter:description"
+      content="Resumable, lossless Android-to-macOS photo/video backup. macOS app + no-installer script."
+    />
+    <meta
+      name="twitter:image"
+      content="./docs/screenshots/ui-config.png"
+    />
+
+    <!-- Canonical: if you use a custom domain for GitHub Pages, update this. -->
+    <link rel="canonical" href="https://javanxd.github.io/pixel_backup/" />
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="./sitemap.xml" />
+
+    <!-- Structured data for AI/SEO -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Pixel Backup",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "macOS",
+        "description": "Resumable, lossless Android-to-macOS photo/video backup. Files are pulled byte-for-byte with adb; nothing is deleted from your Mac.",
+        "license": "https://opensource.org/licenses/MIT",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "downloadUrl": "https://github.com/JavanXD/pixel_backup/releases/latest",
+        "url": "https://github.com/JavanXD/pixel_backup",
+        "author": {
+          "@type": "Person",
+          "name": "JavanXD",
+          "url": "https://github.com/JavanXD"
+        }
+      }
+    </script>
+
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: rgba(255, 255, 255, 0.06);
+        --panel-2: rgba(255, 255, 255, 0.09);
+        --text: #eaf0ff;
+        --muted: rgba(234, 240, 255, 0.72);
+        --border: rgba(234, 240, 255, 0.16);
+        --accent: #3b82f6;
+        --accent-2: #22c55e;
+        --danger: #f87171;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      .skip-link {
+        position: absolute;
+        left: -9999px;
+        top: 0;
+        background: #0b1020;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        padding: 10px 12px;
+        border-radius: 12px;
+        color: var(--text);
+        z-index: 9999;
+      }
+
+      .skip-link:focus {
+        left: 18px;
+        top: 14px;
+      }
+
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        background: radial-gradient(1200px 600px at 15% 0%, #1b2a63 0%, var(--bg) 55%),
+          radial-gradient(900px 450px at 85% 10%, rgba(59, 130, 246, 0.35) 0%, rgba(11, 16, 32, 0) 55%),
+          var(--bg);
+        color: var(--text);
+        line-height: 1.45;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .wrap {
+        width: min(980px, 100%);
+        margin: 0 auto;
+        padding: 28px 18px 64px;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 10px 0 26px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 220px;
+      }
+
+      .logo {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(34, 197, 94, 0.85));
+        border: 1px solid rgba(255, 255, 255, 0.18);
+      }
+
+      .brand h1 {
+        font-size: 15px;
+        margin: 0;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+
+      .brand p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .top-links {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .pill {
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        background: var(--panel);
+        border-radius: 999px;
+        font-size: 13px;
+        color: var(--muted);
+        transition: transform 0.08s ease, background 0.08s ease;
+      }
+
+      .pill:hover {
+        background: var(--panel-2);
+        transform: translateY(-1px);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 18px;
+        align-items: start;
+      }
+
+      @media (max-width: 860px) {
+        .hero {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 18px;
+      }
+
+      .hero h2 {
+        margin: 0 0 10px;
+        font-size: clamp(28px, 4vw, 46px);
+        letter-spacing: -0.02em;
+      }
+
+      .lead {
+        font-size: 16px;
+        color: var(--muted);
+        margin: 0 0 18px;
+      }
+
+      .cta-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 13px 16px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        font-weight: 700;
+        font-size: 14px;
+        transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.09);
+      }
+
+      .btn:focus-visible,
+      .pill:focus-visible,
+      a:focus-visible {
+        outline: 3px solid rgba(59, 130, 246, 0.95);
+        outline-offset: 2px;
+        border-radius: 14px;
+      }
+
+      .btn.primary {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(34, 197, 94, 0.75));
+        border-color: rgba(255, 255, 255, 0.18);
+      }
+
+      .btn.primary:hover {
+        background: linear-gradient(135deg, rgba(59, 130, 246, 1), rgba(34, 197, 94, 0.85));
+      }
+
+      .btn.secondary {
+        border-color: rgba(59, 130, 246, 0.35);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .btn,
+        .pill {
+          transition: none !important;
+        }
+
+        .btn:hover,
+        .pill:hover {
+          transform: none !important;
+        }
+      }
+
+      .fineprint {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
+
+      .shot {
+        padding: 0;
+        overflow: hidden;
+      }
+
+      .shot img {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .shot .caption {
+        padding: 12px 16px 16px;
+      }
+
+      .section-title {
+        margin: 28px 0 12px;
+        font-size: 18px;
+      }
+
+      .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+
+      @media (max-width: 860px) {
+        .grid-2 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      ol.steps {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      ol.steps li {
+        margin: 8px 0;
+        color: var(--muted);
+      }
+
+      .keyline {
+        height: 1px;
+        background: var(--border);
+        margin: 16px 0;
+      }
+
+      details {
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 16px;
+        padding: 12px 14px;
+      }
+
+      details + details {
+        margin-top: 10px;
+      }
+
+      summary {
+        cursor: pointer;
+        font-weight: 800;
+      }
+
+      summary::-webkit-details-marker {
+        display: none;
+      }
+
+      summary:after {
+        content: "+";
+        float: right;
+        color: var(--muted);
+      }
+
+      details[open] summary:after {
+        content: "-";
+      }
+
+      code.inline {
+        background: rgba(255, 255, 255, 0.09);
+        padding: 2px 6px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        font-size: 12.5px;
+      }
+
+      pre {
+        margin: 10px 0 0;
+        overflow: auto;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(0, 0, 0, 0.22);
+        color: rgba(234, 240, 255, 0.92);
+        font-size: 12.8px;
+      }
+
+      footer {
+        margin-top: 34px;
+        padding-top: 18px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 13px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      footer a {
+        color: var(--text);
+        border-bottom: 1px dashed rgba(234, 240, 255, 0.35);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <header>
+        <div class="brand" aria-label="Pixel Backup">
+          <div class="logo" aria-hidden="true"></div>
+          <div>
+            <h1>Pixel Backup</h1>
+            <p>Resumable, lossless backups for macOS</p>
+          </div>
+        </div>
+        <nav class="top-links" aria-label="Quick navigation">
+          <a class="pill" href="https://github.com/JavanXD/pixel_backup" rel="noopener"
+            >GitHub</a
+          >
+          <a
+            class="pill"
+            href="https://github.com/JavanXD/pixel_backup#quick-start"
+            rel="noopener"
+            >Quick start (README)</a
+          >
+          <a class="pill" href="#requirements">Requirements</a>
+          <a class="pill" href="#faq">FAQ</a>
+        </nav>
+      </header>
+
+      <a class="skip-link" href="#main-content">Skip to main content</a>
+
+      <main id="main-content" class="hero">
+        <section class="card">
+          <h2>Back up your Pixel to your Mac. For real.</h2>
+          <p class="lead">
+            Pixel Backup is a simple way to copy your entire Android photo/video library to macOS
+            without re-encoding, without renaming, and without deleting anything.
+          </p>
+
+          <div class="cta-row">
+            <a
+              class="btn primary"
+              href="https://github.com/JavanXD/pixel_backup/releases/latest"
+              rel="noopener"
+            >
+              Download macOS app (DMG)
+            </a>
+            <a class="btn secondary" href="#script" rel="noopener">No-installer shell script</a>
+            <a class="btn secondary" href="#install" rel="noopener">Install guide</a>
+          </div>
+
+          <div class="cta-row" style="margin-top: 12px">
+            <a class="btn secondary" href="#requirements">Jump to requirements</a>
+            <a class="btn secondary" href="#faq">Jump to FAQ</a>
+          </div>
+
+          <div class="fineprint">
+            Dummy-user mode: pick one option below, follow the 3 steps, and start the backup.
+            Everything is resumable—re-running continues where you left off.
+          </div>
+
+          <div class="keyline" role="separator" aria-hidden="true"></div>
+
+          <section id="install" aria-label="Install guide">
+            <h3 class="section-title">Install in 3 steps (macOS app)</h3>
+            <ol class="steps">
+              <li>Download the latest <code class="inline">PixelBackup-*.dmg</code> from Releases.</li>
+              <li>Open the DMG and drag <code class="inline">PixelBackup</code> to Applications.</li>
+              <li>Launch it (Spotlight or Applications) and connect your phone via USB or Wi-Fi.</li>
+            </ol>
+            <p class="fineprint" style="margin-bottom: 0">
+              If macOS shows an "unidentified developer" warning: right-click the app icon and choose
+              <strong>Open</strong> once. Notarized releases do not show this prompt.
+            </p>
+          </section>
+        </section>
+
+        <aside class="card shot" aria-label="App screenshot">
+          <img
+            src="./docs/screenshots/ui-config.png"
+            alt="Pixel Backup UI with device picker and backup controls"
+            loading="lazy"
+          />
+          <div class="caption">
+            <h3 class="section-title" style="margin: 0 0 8px; font-size: 16px">What you get</h3>
+            <div style="color: var(--muted); font-size: 14px">
+              Device picker, folder toggles, live progress, speed & ETA, and a backup history that is easy to browse by date.
+            </div>
+          </div>
+        </aside>
+      </main>
+
+      <section style="margin-top: 26px">
+        <h2 class="section-title" style="margin-top: 0">Pick your installer</h2>
+      </section>
+
+      <div class="grid-2">
+        <section class="card" aria-label="macOS app option">
+          <h3 class="section-title" style="margin-top: 0">Option A: macOS app (DMG)</h3>
+          <p class="lead" style="margin: 0 0 12px; font-size: 14px">
+            Best for dummy users. A GUI wrapper around the shell script.
+          </p>
+          <div class="cta-row">
+            <a
+              class="btn primary"
+              href="https://github.com/JavanXD/pixel_backup/releases/latest"
+              rel="noopener"
+            >
+              Download latest DMG
+            </a>
+            <a class="btn secondary" href="https://github.com/JavanXD/pixel_backup/blob/main/README.md" rel="noopener"
+              >Read the details</a
+            >
+          </div>
+        </section>
+
+        <section id="script" class="card" aria-label="Shell script option">
+          <h3 class="section-title" style="margin-top: 0">Option B: shell script (no installer)</h3>
+          <p class="lead" style="margin: 0 0 12px; font-size: 14px">
+            Works on any macOS as long as <code class="inline">adb</code> is available in your PATH.
+          </p>
+          <pre><code>brew install android-platform-tools
+chmod +x pixel_backup.sh
+./pixel_backup.sh</code></pre>
+          <p style="color: var(--muted); font-size: 13px; margin: 10px 0 0">
+            Script file:
+            <a href="https://github.com/JavanXD/pixel_backup/blob/main/pixel_backup.sh" rel="noopener">
+              <code class="inline">pixel_backup.sh</code>
+            </a>
+          </p>
+          <p class="fineprint" style="margin-top: 10px; margin-bottom: 0">
+            If your organization blocks installing apps, this option avoids macOS trust prompts.
+          </p>
+        </section>
+      </div>
+
+      <section id="requirements" style="margin-top: 26px">
+        <h2 class="section-title" style="margin-top: 0">Requirements</h2>
+      </section>
+      <div class="grid-2">
+        <div class="card">
+          <div style="font-weight: 900; margin-bottom: 8px">macOS</div>
+          <div style="color: var(--muted)">
+            macOS 13 Ventura or later. Works on both Apple Silicon and Intel.
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-weight: 900; margin-bottom: 8px">Android device</div>
+          <div style="color: var(--muted)">
+            Enable USB debugging (or Wireless Debugging). Pixel Backup uses <code class="inline">adb</code> to pull files byte-for-byte.
+          </div>
+        </div>
+      </div>
+
+      <section id="faq" style="margin-top: 26px">
+        <h2 class="section-title" style="margin-top: 0">FAQ (dummy-user answers)</h2>
+      </section>
+      <div class="card">
+        <details>
+          <summary>Will this re-encode or rename my files?</summary>
+          <div style="color: var(--muted); margin-top: 10px">
+            No. Pixel Backup pulls your files byte-for-byte with <code class="inline">adb pull</code>. It does not transcode, rename, or delete anything on your Mac.
+          </div>
+        </details>
+        <details>
+          <summary>What happens if the transfer fails halfway?</summary>
+          <div style="color: var(--muted); margin-top: 10px">
+            You can re-run anytime. Pixel Backup is resumable and skips already-copied files by size match, so you only pay for what is missing.
+          </div>
+        </details>
+        <details>
+          <summary>Do I need USB, or can I do Wi-Fi?</summary>
+          <div style="color: var(--muted); margin-top: 10px">
+            Both. The app supports Wireless ADB by connecting over IP. If you prefer USB-only, use the USB device flow.
+          </div>
+        </details>
+        <details>
+          <summary>Where do backups get saved?</summary>
+          <div style="color: var(--muted); margin-top: 10px">
+            Each run creates a date-stamped folder like <code class="inline">YYYY-MM-DD_DeviceName_Serial</code> under your chosen destination root.
+          </div>
+        </details>
+      </div>
+
+      <footer>
+        <div>
+          <strong>Pixel Backup</strong> is open source. License: <a href="https://opensource.org/licenses/MIT" rel="noopener">MIT</a>.
+        </div>
+        <div>
+          <a href="https://github.com/JavanXD/pixel_backup" rel="noopener">GitHub</a> |
+          <a href="https://github.com/JavanXD/pixel_backup/blob/main/SECURITY.md" rel="noopener">Security</a>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
+
