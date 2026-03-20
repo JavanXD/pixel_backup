@@ -234,6 +234,13 @@
         font-weight: 700;
         font-size: 14px;
         transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
+        border-bottom: none !important;
+      }
+
+      .btn.small {
+        padding: 10px 12px;
+        border-radius: 12px;
+        font-size: 13px;
       }
 
       .btn:hover {
@@ -390,7 +397,7 @@
         justify-content: space-between;
       }
 
-      footer a {
+      footer a:not(.btn) {
         color: var(--text);
         border-bottom: 1px dashed rgba(234, 240, 255, 0.35);
       }
@@ -514,15 +521,53 @@
           <p class="lead" style="margin: 0 0 12px; font-size: 14px">
             Works on any macOS as long as <code class="inline">adb</code> is available in your PATH.
           </p>
-          <pre><code>brew install android-platform-tools
-chmod +x pixel_backup.sh
-./pixel_backup.sh</code></pre>
-          <p style="color: var(--muted); font-size: 13px; margin: 10px 0 0">
-            Script file:
-            <a href="https://github.com/JavanXD/pixel_backup/blob/main/pixel_backup.sh" rel="noopener">
-              <code class="inline">pixel_backup.sh</code>
-            </a>
+
+          <p class="fineprint" style="margin-top: 0; margin-bottom: 10px">
+            Dummy-user flow: install `adb`, download the script, run it. (No installers, no trust prompts.)
           </p>
+
+          <ol class="steps">
+            <li>Install adb (easy mode)</li>
+            <li>Download <code class="inline">pixel_backup.sh</code></li>
+            <li>Run the script</li>
+          </ol>
+
+          <pre><code>brew install android-platform-tools
+adb version</code></pre>
+
+          <div class="cta-row" style="margin-top: 12px">
+            <a
+              class="btn secondary small"
+              href="https://github.com/JavanXD/pixel_backup/releases/latest"
+              rel="noopener"
+            >
+              Download pixel_backup.sh
+            </a>
+            <a
+              class="btn secondary small"
+              href="https://github.com/JavanXD/pixel_backup/blob/main/pixel_backup.sh"
+              rel="noopener"
+            >
+              View script
+            </a>
+          </div>
+
+          <pre style="margin-top: 12px"><code>chmod +x pixel_backup.sh
+./pixel_backup.sh</code></pre>
+
+          <details style="margin-top: 12px">
+            <summary>Don&rsquo;t have Homebrew?</summary>
+            <div style="color: var(--muted); margin-top: 10px">
+              Install <code class="inline">adb</code> by downloading Google&rsquo;s platform-tools for macOS, extracting them, then ensuring <code class="inline">adb</code> runs and prints a version.
+            </div>
+            <div style="color: var(--muted); margin-top: 10px">
+              Download: <a href="https://dl.google.com/android/repository/platform-tools-latest-darwin.zip" rel="noopener">platform-tools-latest-darwin.zip</a>
+            </div>
+            <div style="color: var(--muted); margin-top: 10px">
+              After you extract: run <code class="inline">adb version</code> (or run the <code class="inline">adb</code> binary from inside the extracted folder).
+            </div>
+          </details>
+
           <p class="fineprint" style="margin-top: 10px; margin-bottom: 0">
             If your organization blocks installing apps, this option avoids macOS trust prompts.
           </p>
@@ -582,8 +627,14 @@ chmod +x pixel_backup.sh
           <strong>Pixel Backup</strong> is open source. License: <a href="https://opensource.org/licenses/MIT" rel="noopener">MIT</a>.
         </div>
         <div>
-          <a href="https://github.com/JavanXD/pixel_backup" rel="noopener">GitHub</a> |
-          <a href="https://github.com/JavanXD/pixel_backup/blob/main/SECURITY.md" rel="noopener">Security</a>
+          <a class="btn secondary small" href="https://github.com/JavanXD/pixel_backup" rel="noopener">GitHub</a>
+          <a
+            class="btn secondary small"
+            href="https://github.com/JavanXD/pixel_backup/blob/main/SECURITY.md"
+            rel="noopener"
+          >
+            Security
+          </a>
         </div>
       </footer>
     </div>
