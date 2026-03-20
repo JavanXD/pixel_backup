@@ -46,7 +46,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
 
@@ -69,23 +69,23 @@
         "url": "https://github.com/JavanXD/pixel_backup",
         "author": {
           "@type": "Person",
-          "name": "JavanXD",
-          "url": "https://github.com/JavanXD"
+          "name": "Javan Rasokat",
+          "url": "https://about.javan.de"
         }
       }
     </script>
 
     <style>
       :root {
-        --bg: #fbfbf7;
-        --panel: #ffffff;
-        --panel-2: #f3f4f8;
-        --text: #0f172a;
-        --muted: rgba(15, 23, 42, 0.7);
-        --border: rgba(15, 23, 42, 0.14);
-        --accent: #1d4ed8;
-        --accent-2: #22c55e;
-        --danger: #dc2626;
+        --bg: #070a12;
+        --panel: rgba(255, 255, 255, 0.06);
+        --panel-2: rgba(255, 255, 255, 0.1);
+        --text: #eaf0ff;
+        --muted: rgba(234, 240, 255, 0.74);
+        --border: rgba(234, 240, 255, 0.18);
+        --accent: #60a5fa;
+        --accent-2: #34d399;
+        --danger: #fb7185;
       }
 
       * {
@@ -96,13 +96,13 @@
         position: absolute;
         left: -9999px;
         top: 0;
-        background: #ffffff;
-        border: 1px solid rgba(15, 23, 42, 0.18);
+        background: #070a12;
+        border: 1px solid rgba(96, 165, 250, 0.35);
         padding: 10px 12px;
         border-radius: 12px;
         color: var(--text);
         z-index: 9999;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
       }
 
       .skip-link:focus {
@@ -114,7 +114,9 @@
         margin: 0;
         font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system,
           Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-        background: linear-gradient(180deg, #fcfcf9 0%, #f3f4ff 100%);
+        background: radial-gradient(900px 540px at 18% 0%, rgba(96, 165, 250, 0.4) 0%, rgba(7, 10, 18, 0) 58%),
+          radial-gradient(700px 420px at 92% 18%, rgba(52, 211, 153, 0.22) 0%, rgba(7, 10, 18, 0) 55%),
+          var(--bg);
         color: var(--text);
         line-height: 1.45;
       }
@@ -125,10 +127,10 @@
         inset: 0;
         pointer-events: none;
         z-index: -1;
-        opacity: 0.1;
-        background-image: linear-gradient(to right, rgba(15, 23, 42, 0.08) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(15, 23, 42, 0.06) 1px, transparent 1px);
-        background-size: 64px 64px;
+        opacity: 0.18;
+        background-image: linear-gradient(to right, rgba(96, 165, 250, 0.16) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(52, 211, 153, 0.1) 1px, transparent 1px);
+        background-size: 58px 58px;
       }
 
       a {
@@ -162,7 +164,7 @@
         height: 42px;
         border-radius: 10px;
         background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(34, 197, 94, 0.85));
-        border: 1px solid rgba(15, 23, 42, 0.08);
+        border: 1px solid rgba(234, 240, 255, 0.18);
       }
 
       .brand h1 {
@@ -187,20 +189,20 @@
 
       .pill {
         padding: 10px 12px;
-        border: 1px solid rgba(29, 78, 216, 0.22);
-        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid rgba(234, 240, 255, 0.18);
+        background: var(--panel);
         border-radius: 999px;
         font-size: 13px;
-        font-weight: 600;
-        color: rgba(29, 78, 216, 0.98);
+        font-weight: 700;
+        color: var(--muted);
         transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
-        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.05);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.24);
       }
 
       .pill:hover {
-        background: #ffffff;
+        background: var(--panel-2);
         transform: translateY(-1px);
-        border-color: rgba(29, 78, 216, 0.32);
+        border-color: rgba(96, 165, 250, 0.35);
       }
 
       .hero {
@@ -221,14 +223,15 @@
         border: 1px solid var(--border);
         border-radius: 18px;
         padding: 18px;
-        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.36);
       }
 
       .hero h2 {
         margin: 0 0 10px;
-        font-family: "Fraunces", ui-serif, Georgia, "Times New Roman", Times, serif;
-        font-size: clamp(30px, 4.2vw, 54px);
-        letter-spacing: -0.01em;
+        font-family: "Orbitron", ui-sans-serif, system-ui;
+        text-transform: none;
+        font-size: clamp(28px, 4vw, 52px);
+        letter-spacing: -0.02em;
       }
 
       .lead {
@@ -249,16 +252,16 @@
         justify-content: center;
         gap: 10px;
         padding: 13px 16px;
-        border-radius: 14px;
-        border: 1px solid rgba(15, 23, 42, 0.14);
-        background: rgba(248, 250, 252, 0.98);
+        border-radius: 16px;
+        border: 1px solid rgba(234, 240, 255, 0.18);
+        background: rgba(255, 255, 255, 0.06);
         color: var(--text);
-        font-weight: 600;
+        font-weight: 800;
         font-size: 14px;
         line-height: 1;
         text-decoration: none;
         transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06);
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
       }
 
       .btn.small {
@@ -269,8 +272,8 @@
 
       .btn:hover {
         transform: translateY(-1px);
-        background: #ffffff;
-        border-color: rgba(15, 23, 42, 0.2);
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(96, 165, 250, 0.5);
       }
 
       .btn:focus-visible,
@@ -282,19 +285,19 @@
       }
 
       .btn.primary {
-        background: linear-gradient(135deg, rgba(29, 78, 216, 0.98), rgba(34, 197, 94, 0.72));
-        border-color: rgba(29, 78, 216, 0.52);
+        background: linear-gradient(135deg, rgba(96, 165, 250, 0.98), rgba(52, 211, 153, 0.72));
+        border-color: rgba(96, 165, 250, 0.62);
         color: #ffffff;
       }
 
       .btn.primary:hover {
-        background: linear-gradient(135deg, rgba(29, 78, 216, 1), rgba(34, 197, 94, 0.9));
+        background: linear-gradient(135deg, rgba(96, 165, 250, 1), rgba(52, 211, 153, 0.9));
       }
 
       .btn.secondary {
-        border-color: rgba(29, 78, 216, 0.32);
-        color: rgba(29, 78, 216, 0.98);
-        background: rgba(29, 78, 216, 0.04);
+        border-color: rgba(96, 165, 250, 0.32);
+        color: rgba(96, 165, 250, 0.98);
+        background: rgba(96, 165, 250, 0.06);
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -365,7 +368,7 @@
 
       details {
         border: 1px solid var(--border);
-        background: rgba(15, 23, 42, 0.02);
+        background: rgba(255, 255, 255, 0.04);
         border-radius: 16px;
         padding: 12px 14px;
       }
@@ -394,10 +397,10 @@
       }
 
       code.inline {
-        background: rgba(29, 78, 216, 0.06);
+        background: rgba(96, 165, 250, 0.14);
         padding: 2px 6px;
         border-radius: 10px;
-        border: 1px solid rgba(29, 78, 216, 0.16);
+        border: 1px solid rgba(96, 165, 250, 0.22);
         font-size: 12.5px;
       }
 
@@ -406,9 +409,9 @@
         overflow: auto;
         padding: 12px 14px;
         border-radius: 14px;
-        border: 1px solid rgba(15, 23, 42, 0.14);
-        background: rgba(15, 23, 42, 0.04);
-        color: rgba(15, 23, 42, 0.95);
+        border: 1px solid rgba(234, 240, 255, 0.16);
+        background: rgba(0, 0, 0, 0.22);
+        color: rgba(234, 240, 255, 0.92);
         font-size: 12.8px;
       }
 
@@ -427,7 +430,7 @@
 
       footer a:not(.btn) {
         color: var(--text);
-        border-bottom: 1px dashed rgba(15, 23, 42, 0.25);
+        border-bottom: 1px dashed rgba(234, 240, 255, 0.35);
       }
     </style>
   </head>
