@@ -43,6 +43,12 @@
     <!-- Canonical: if you use a custom domain for GitHub Pages, update this. -->
     <link rel="canonical" href="https://javanxd.github.io/pixel_backup/" />
     <link rel="sitemap" type="application/xml" title="Sitemap" href="./sitemap.xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
 
     <!-- Structured data for AI/SEO -->
     <script type="application/ld+json">
@@ -71,15 +77,15 @@
 
     <style>
       :root {
-        --bg: #0b1020;
-        --panel: rgba(255, 255, 255, 0.06);
-        --panel-2: rgba(255, 255, 255, 0.09);
-        --text: #eaf0ff;
-        --muted: rgba(234, 240, 255, 0.72);
-        --border: rgba(234, 240, 255, 0.16);
-        --accent: #3b82f6;
+        --bg: #fbfbf7;
+        --panel: #ffffff;
+        --panel-2: #f3f4f8;
+        --text: #0f172a;
+        --muted: rgba(15, 23, 42, 0.7);
+        --border: rgba(15, 23, 42, 0.14);
+        --accent: #1d4ed8;
         --accent-2: #22c55e;
-        --danger: #f87171;
+        --danger: #dc2626;
       }
 
       * {
@@ -90,12 +96,13 @@
         position: absolute;
         left: -9999px;
         top: 0;
-        background: #0b1020;
-        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: #ffffff;
+        border: 1px solid rgba(15, 23, 42, 0.18);
         padding: 10px 12px;
         border-radius: 12px;
         color: var(--text);
         z-index: 9999;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
       }
 
       .skip-link:focus {
@@ -105,13 +112,23 @@
 
       body {
         margin: 0;
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
-          Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-        background: radial-gradient(1200px 600px at 15% 0%, #1b2a63 0%, var(--bg) 55%),
-          radial-gradient(900px 450px at 85% 10%, rgba(59, 130, 246, 0.35) 0%, rgba(11, 16, 32, 0) 55%),
-          var(--bg);
+        font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system,
+          Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        background: linear-gradient(180deg, #fcfcf9 0%, #f3f4ff 100%);
         color: var(--text);
         line-height: 1.45;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+        opacity: 0.22;
+        background-image: linear-gradient(to right, rgba(15, 23, 42, 0.08) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(15, 23, 42, 0.06) 1px, transparent 1px);
+        background-size: 64px 64px;
       }
 
       a {
@@ -145,7 +162,7 @@
         height: 42px;
         border-radius: 10px;
         background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(34, 197, 94, 0.85));
-        border: 1px solid rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(15, 23, 42, 0.08);
       }
 
       .brand h1 {
@@ -170,12 +187,12 @@
 
       .pill {
         padding: 10px 12px;
-        border: 1px solid var(--border);
-        background: var(--panel);
-        border-radius: 999px;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 12px;
         font-size: 13px;
         color: var(--muted);
-        transition: transform 0.08s ease, background 0.08s ease;
+        transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
       }
 
       .pill:hover {
@@ -201,12 +218,14 @@
         border: 1px solid var(--border);
         border-radius: 18px;
         padding: 18px;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
       }
 
       .hero h2 {
         margin: 0 0 10px;
-        font-size: clamp(28px, 4vw, 46px);
-        letter-spacing: -0.02em;
+        font-family: "Fraunces", ui-serif, Georgia, "Times New Roman", Times, serif;
+        font-size: clamp(30px, 4.2vw, 54px);
+        letter-spacing: -0.01em;
       }
 
       .lead {
@@ -228,10 +247,10 @@
         gap: 10px;
         padding: 13px 16px;
         border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(15, 23, 42, 0.14);
+        background: rgba(255, 255, 255, 0.96);
         color: var(--text);
-        font-weight: 700;
+        font-weight: 600;
         font-size: 14px;
         transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
         border-bottom: none !important;
@@ -245,7 +264,7 @@
 
       .btn:hover {
         transform: translateY(-1px);
-        background: rgba(255, 255, 255, 0.09);
+        background: #ffffff;
       }
 
       .btn:focus-visible,
@@ -257,16 +276,19 @@
       }
 
       .btn.primary {
-        background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(34, 197, 94, 0.75));
-        border-color: rgba(255, 255, 255, 0.18);
+        background: linear-gradient(135deg, rgba(29, 78, 216, 0.98), rgba(34, 197, 94, 0.72));
+        border-color: rgba(29, 78, 216, 0.45);
+        color: #ffffff;
       }
 
       .btn.primary:hover {
-        background: linear-gradient(135deg, rgba(59, 130, 246, 1), rgba(34, 197, 94, 0.85));
+        background: linear-gradient(135deg, rgba(29, 78, 216, 1), rgba(34, 197, 94, 0.9));
       }
 
       .btn.secondary {
-        border-color: rgba(59, 130, 246, 0.35);
+        border-color: rgba(29, 78, 216, 0.32);
+        color: rgba(29, 78, 216, 0.98);
+        background: rgba(29, 78, 216, 0.04);
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -337,7 +359,7 @@
 
       details {
         border: 1px solid var(--border);
-        background: rgba(255, 255, 255, 0.04);
+        background: rgba(15, 23, 42, 0.02);
         border-radius: 16px;
         padding: 12px 14px;
       }
@@ -366,10 +388,10 @@
       }
 
       code.inline {
-        background: rgba(255, 255, 255, 0.09);
+        background: rgba(29, 78, 216, 0.06);
         padding: 2px 6px;
         border-radius: 10px;
-        border: 1px solid rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(29, 78, 216, 0.16);
         font-size: 12.5px;
       }
 
@@ -378,9 +400,9 @@
         overflow: auto;
         padding: 12px 14px;
         border-radius: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        background: rgba(0, 0, 0, 0.22);
-        color: rgba(234, 240, 255, 0.92);
+        border: 1px solid rgba(15, 23, 42, 0.14);
+        background: rgba(15, 23, 42, 0.04);
+        color: rgba(15, 23, 42, 0.95);
         font-size: 12.8px;
       }
 
@@ -399,7 +421,7 @@
 
       footer a:not(.btn) {
         color: var(--text);
-        border-bottom: 1px dashed rgba(234, 240, 255, 0.35);
+        border-bottom: 1px dashed rgba(15, 23, 42, 0.25);
       }
     </style>
   </head>
