@@ -8,6 +8,20 @@ Back up your entire Pixel (or any Android) photo library to your Mac over USB or
 
 ---
 
+## Motivation
+
+I wanted a simple, reliable way to move my Pixel's entire photo and video library onto my computers—my Windows desktop first, and later my MacBook.
+
+**What went wrong:** In practice, none of the existing tools I tried worked well for real, large libraries. When I had more than **140 GB** to transfer, transfers kept failing or taking so long that they effectively weren’t usable (it was **over a day** before I gave up).
+
+**What I built:** A purpose-made shell script that does the transfer for me using `adb`. The idea is straightforward—pull files byte-for-byte, then make the workflow safe to re-run and resume. With this approach, my **140 GB** backups typically finish in **under 10 minutes** (in my setup).
+
+**Why I care about original quality:** I use Google Photos, but I rely on local storage for the "source of truth" originals. In my workflow, Google Photos does not keep my full original quality in the cloud the way I want—so local originals let me clean up my phone while preserving them on disk.
+
+If you have lots of GB sitting on your phone (especially if transfers are flaky or you want to keep originals), this project is for you.
+
+---
+
 ## Features
 
 - **Native macOS app** — SwiftUI window with device picker, folder selection, live progress, speed & ETA, backup history, and system notifications
@@ -321,12 +335,6 @@ Contributions are welcome. Please:
 3. Test with a real Android device if changing anything in `pixel_backup.sh` or `BackupManager.swift`
 4. Update `CHANGELOG.md` for user-visible changes
 5. Open a **Pull Request** — the CI workflow runs automatically on your PR
-
-### Known gaps / good first issues
-
-- [ ] Optional checksum verification (md5/sha1) after copy
-- [ ] Scheduled / automatic backups via `LaunchAgent`
-
 ---
 
 ## License
