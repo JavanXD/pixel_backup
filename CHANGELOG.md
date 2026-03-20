@@ -4,6 +4,24 @@ All notable changes to Pixel Backup are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
+## Docs Update Rules
+
+When something changes, update the file that matches the intent:
+
+- `CHANGELOG.md` (user-visible release notes)
+  - Add new bullets under `## [Unreleased]` → `### Added` / `### Changed` / `### Fixed`.
+  - Keep this section accurate because the GitHub release workflow pulls the text from `CHANGELOG.md` and publishes it as the GitHub Release body.
+  - Before cutting a release (tag `vX.Y.Z`): move all `## [Unreleased]` bullets into the new version heading, then leave `## [Unreleased]` ready for the next cycle.
+
+- `TODO.md` (remaining work / checklists)
+  - Mark tasks as done or remove them when you fully implement and verify them.
+  - If something is “implemented but not yet released”, keep it in `CHANGELOG.md` and leave TODO focused on what’s still left.
+
+- `IMPROVEMENTS.md` (deep development notes + rationale)
+  - Use for deeper “why/how” documentation and technical decisions (problem → root cause → fix).
+  - Prefer `CHANGELOG.md` for short, user-facing statements instead of copying long technical writeups here.
+
+---
 
 ## [Unreleased]
 
