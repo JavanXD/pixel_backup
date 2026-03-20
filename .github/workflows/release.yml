@@ -10,11 +10,11 @@ on:
 jobs:
   build-and-release:
     name: Build DMG & publish release
-    runs-on: macos-14          # Apple Silicon runner (macOS 14 Sonoma)
+    runs-on: macos-15          # Apple Silicon runner (macOS 15 Sequoia)
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # ── Derive version from tag ────────────────────────────────────────────
       - name: Set version
@@ -23,6 +23,16 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"   # strip leading "v"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$GITHUB_REF_NAME"   >> "$GITHUB_OUTPUT"
+
+      # ── Detect available secrets (secrets context is not allowed in if:) ───
+      - name: Check secrets
+        id: secrets
+        env:
+          CERT: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+        run: |
+          [ -n "$CERT" ]     && echo "has_cert=true"     >> "$GITHUB_OUTPUT" || echo "has_cert=false"     >> "$GITHUB_OUTPUT"
+          [ -n "$APPLE_ID" ] && echo "has_apple_id=true" >> "$GITHUB_OUTPUT" || echo "has_apple_id=false" >> "$GITHUB_OUTPUT"
 
       # ── Download adb ───────────────────────────────────────────────────────
       - name: Download adb
@@ -60,7 +70,7 @@ jobs:
 
       # ── Code sign (Developer ID if secrets present, else ad-hoc) ──────────
       - name: Import signing certificate
-        if: ${{ secrets.DEVELOPER_ID_CERT_P12 != '' }}
+        if: steps.secrets.outputs.has_cert == 'true'
         env:
           P12_BASE64:  ${{ secrets.DEVELOPER_ID_CERT_P12 }}
           P12_PASSWORD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
@@ -78,7 +88,7 @@ jobs:
             -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
       - name: Sign app (Developer ID)
-        if: ${{ secrets.DEVELOPER_ID_CERT_P12 != '' }}
+        if: steps.secrets.outputs.has_cert == 'true'
         env:
           DEVELOPER_ID: ${{ secrets.DEVELOPER_ID_APP }}
           ENTITLEMENTS: PixelBackupApp/PixelBackup.entitlements
@@ -94,7 +104,7 @@ jobs:
           codesign --verify --deep --strict --verbose=2 PixelBackup.app
 
       - name: Sign app (ad-hoc fallback)
-        if: ${{ secrets.DEVELOPER_ID_CERT_P12 == '' }}
+        if: steps.secrets.outputs.has_cert == 'false'
         run: |
           codesign --force --deep --sign - \
             --entitlements PixelBackupApp/PixelBackup.entitlements \
@@ -103,7 +113,7 @@ jobs:
 
       # ── Notarize (only when Developer ID cert is available) ───────────────
       - name: Notarize app
-        if: ${{ secrets.DEVELOPER_ID_CERT_P12 != '' && secrets.APPLE_ID != '' }}
+        if: steps.secrets.outputs.has_cert == 'true' && steps.secrets.outputs.has_apple_id == 'true'
         env:
           APPLE_ID:       ${{ secrets.APPLE_ID }}
           NOTARY_TEAM:    ${{ secrets.NOTARY_TEAM }}
@@ -172,7 +182,7 @@ jobs:
 
       # ── Publish GitHub Release ─────────────────────────────────────────────
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v2.6.1
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: "Pixel Backup ${{ steps.version.outputs.tag }}"

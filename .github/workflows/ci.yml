@@ -9,11 +9,11 @@ on:
 jobs:
   build:
     name: Build & lint
-    runs-on: macos-14          # Apple Silicon runner (macOS 14 Sonoma)
+    runs-on: macos-15          # Apple Silicon runner (macOS 15 Sequoia)
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # ── Download adb (binary not stored in git) ────────────────────────────
       - name: Download adb
