@@ -245,37 +245,6 @@ PRECHECK_FREE_SPACE=2 ./pixel_backup.sh            # full estimate before copy
 
 ---
 
-## Changelog
-
-### Unreleased
-- **Wireless ADB** — connect over Wi-Fi, auto-reconnect saved addresses, Android Wireless Debugging pairing sheet
-- `Documents` added as a default copy folder
-- App icon — custom design bundled as `AppIcon.icns`
-- `build.sh` auto-installs to `/Applications` after every build
-- Real-time transfer speed (MB/s) and ETA in progress view
-- Elapsed time counter and current filename during backup
-- Free disk space indicator on destination picker
-- Last backup summary strip on config panel
-- "Try Again" / "New Backup" button on failed/cancelled state
-- `⌘Return` keyboard shortcut to start backup
-- History loads from `manifest.tsv` instead of walking files (critical perf fix for large backups)
-- History shows "Folder moved or deleted" if a backup folder was removed after history loaded
-- Multiple independent windows (`⌘N`) — each window has its own `BackupManager`
-- Menu bar `NSStatusItem` replaces SwiftUI `MenuBarExtra` (fixes menu appearing on wrong display)
-- `+` toolbar button to open a new window when only one is open
-- USB debugging step-by-step guide shown inline when no device is found
-- Music and Backups added as default copy folders; custom folder paths via UI
-- Drag-and-drop destination folder onto window or picker row
-- English, German, Spanish, French localization
-- `--help` flag on shell script prints all parameters
-- Dated backup folder names (`YYYY-MM-DD_DeviceName_Serial`)
-- `sanitize_name()` handles Unicode, emoji, and TCP/IP serials (colons) safely
-
-### 0.1.0 — Initial release
-- Core `pixel_backup.sh` with ADB auto-recovery, per-file retries, disk space guard
-- Native macOS SwiftUI app with device picker, folder selection, live log view
-- Backup history view, completion notifications, menu bar mode
-
 ---
 
 ## CI / CD
