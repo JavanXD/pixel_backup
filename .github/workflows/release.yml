@@ -7,26 +7,29 @@ on:
     tags:
       - "v*"
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-release:
     name: Build DMG & publish release
-    runs-on: macos-15          # Apple Silicon runner (macOS 15 Sequoia)
+    runs-on: macos-15
+    timeout-minutes: 90
     permissions:
-      contents: write           # required to create GitHub Releases
+      contents: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # ── Derive version from tag ────────────────────────────────────────────
       - name: Set version
         id: version
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"   # strip leading "v"
+          VERSION="${GITHUB_REF_NAME#v}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$GITHUB_REF_NAME"   >> "$GITHUB_OUTPUT"
 
-      # ── Detect available secrets (secrets context is not allowed in if:) ───
       - name: Check secrets
         id: secrets
         env:
@@ -36,20 +39,22 @@ jobs:
           [ -n "$CERT" ]     && echo "has_cert=true"     >> "$GITHUB_OUTPUT" || echo "has_cert=false"     >> "$GITHUB_OUTPUT"
           [ -n "$APPLE_ID" ] && echo "has_apple_id=true" >> "$GITHUB_OUTPUT" || echo "has_apple_id=false" >> "$GITHUB_OUTPUT"
 
-      # ── Download adb ───────────────────────────────────────────────────────
-      - name: Download adb
-        run: |
-          curl -fsSL -o /tmp/pt.zip \
-            https://dl.google.com/android/repository/platform-tools-latest-darwin.zip
-          unzip -j /tmp/pt.zip platform-tools/adb \
-            -d PixelBackupApp/Sources/PixelBackup/Resources/
-          chmod +x PixelBackupApp/Sources/PixelBackup/Resources/adb
+      - name: Setup adb
+        uses: ./.github/actions/setup-adb
 
-      # ── Build release binary ───────────────────────────────────────────────
+      - name: Cache Swift Package Manager
+        uses: actions/cache@v4
+        with:
+          path: |
+            PixelBackupApp/.build
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-spm-release-${{ hashFiles('PixelBackupApp/Package.swift', 'PixelBackupApp/Sources/**') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-release-
+
       - name: Build (release)
         run: swift build -c release --package-path PixelBackupApp
 
-      # ── Assemble .app bundle ───────────────────────────────────────────────
       - name: Assemble PixelBackup.app
         run: |
           APP=PixelBackup.app
@@ -59,7 +64,6 @@ jobs:
           cp PixelBackupApp/.build/release/PixelBackup "$CONTENTS/MacOS/PixelBackup"
           cp PixelBackupApp/Sources/PixelBackup/Info.plist "$CONTENTS/Info.plist"
 
-          # Bundled resources (adb + pixel_backup.sh) — prefer the SPM-built bundle
           BUILT_RES="PixelBackupApp/.build/release/PixelBackup_PixelBackup.bundle/Contents/Resources"
           if [ -d "$BUILT_RES" ]; then
             cp -r "$BUILT_RES/"* "$CONTENTS/Resources/"
@@ -70,7 +74,6 @@ jobs:
           chmod +x "$CONTENTS/Resources/adb"
           chmod +x "$CONTENTS/Resources/pixel_backup.sh"
 
-      # ── Code sign (Developer ID if secrets present, else ad-hoc) ──────────
       - name: Import signing certificate
         if: steps.secrets.outputs.has_cert == 'true'
         env:
@@ -113,7 +116,6 @@ jobs:
             PixelBackup.app
           echo "⚠️  Ad-hoc signed — users must right-click → Open on first launch"
 
-      # ── Notarize (only when Developer ID cert is available) ───────────────
       - name: Notarize app
         if: steps.secrets.outputs.has_cert == 'true' && steps.secrets.outputs.has_apple_id == 'true'
         env:
@@ -130,9 +132,16 @@ jobs:
           xcrun stapler staple PixelBackup.app
           spctl --assess --type execute --verbose PixelBackup.app
 
-      # ── Create DMG ─────────────────────────────────────────────────────────
+      - name: Cache Homebrew downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: ${{ runner.os }}-brew-create-dmg-v1
+          restore-keys: |
+            ${{ runner.os }}-brew-
+
       - name: Install create-dmg
-        run: brew install create-dmg
+        run: brew list create-dmg &>/dev/null || brew install create-dmg
 
       - name: Create DMG
         id: dmg
@@ -140,8 +149,6 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           DMG="PixelBackup-${VERSION}.dmg"
 
-          # create-dmg exits non-zero if no code-signing is done but the app
-          # is already signed ad-hoc; use || true to not fail the step.
           create-dmg \
             --volname "PixelBackup" \
             --window-pos 200 120 \
@@ -153,7 +160,6 @@ jobs:
             "$DMG" \
             PixelBackup.app || true
 
-          # Fallback: hdiutil if create-dmg produced nothing
           if [ ! -f "$DMG" ]; then
             hdiutil create -volname PixelBackup \
               -srcfolder PixelBackup.app \
@@ -164,25 +170,21 @@ jobs:
           echo "name=$DMG" >> "$GITHUB_OUTPUT"
           ls -lh "$DMG"
 
-      # ── Generate release notes from CHANGELOG + template ─────────────────
       - name: Extract release notes
         id: notes
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
-          # Pull everything between the first two version headings in CHANGELOG.md
           CHANGELOG=$(awk '
             /^## \[/ { if (found) exit; found=1; next }
             found { print }
           ' CHANGELOG.md)
 
-          # Substitute version placeholder in template and append changelog
           sed "s/{version}/$VERSION/g" .github/release_template.md > /tmp/release_notes.md
           printf '\n---\n\n## Changes in this release\n\n' >> /tmp/release_notes.md
           echo "$CHANGELOG" >> /tmp/release_notes.md
           cat /tmp/release_notes.md
 
-      # ── Publish GitHub Release ─────────────────────────────────────────────
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

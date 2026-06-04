@@ -3,32 +3,48 @@ name: CI
 on:
   push:
     branches: [main, develop]
+    paths:
+      - "PixelBackupApp/**"
+      - "pixel_backup.sh"
+      - ".github/workflows/ci.yml"
+      - ".github/actions/setup-adb/**"
   pull_request:
     branches: [main]
+    paths:
+      - "PixelBackupApp/**"
+      - "pixel_backup.sh"
+      - ".github/workflows/ci.yml"
+      - ".github/actions/setup-adb/**"
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     name: Build & lint
-    runs-on: macos-15          # Apple Silicon runner (macOS 15 Sequoia)
+    runs-on: macos-15
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # ── Download adb (binary not stored in git) ────────────────────────────
-      - name: Download adb
-        run: |
-          curl -fsSL -o /tmp/pt.zip \
-            https://dl.google.com/android/repository/platform-tools-latest-darwin.zip
-          unzip -j /tmp/pt.zip platform-tools/adb \
-            -d PixelBackupApp/Sources/PixelBackup/Resources/
-          chmod +x PixelBackupApp/Sources/PixelBackup/Resources/adb
-          echo "adb version: $(PixelBackupApp/Sources/PixelBackup/Resources/adb version)"
+      - name: Setup adb
+        uses: ./.github/actions/setup-adb
 
-      # ── Swift build ────────────────────────────────────────────────────────
+      - name: Cache Swift Package Manager
+        uses: actions/cache@v4
+        with:
+          path: |
+            PixelBackupApp/.build
+            ~/Library/Caches/org.swift.swiftpm
+          key: ${{ runner.os }}-spm-debug-${{ hashFiles('PixelBackupApp/Package.swift', 'PixelBackupApp/Sources/**') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-debug-
+
       - name: Build (debug)
         run: swift build --package-path PixelBackupApp
 
-      # ── Shell script syntax check ──────────────────────────────────────────
       - name: Lint pixel_backup.sh
         run: bash -n pixel_backup.sh && echo "Shell script syntax OK"

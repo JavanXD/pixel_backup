@@ -1,0 +1,29 @@
+name: Setup adb (platform-tools)
+description: Restore or download the bundled adb binary for PixelBackupApp
+runs:
+  using: composite
+  steps:
+    - name: Cache adb binary
+      id: adb-cache
+      uses: actions/cache@v4
+      with:
+        path: PixelBackupApp/Sources/PixelBackup/Resources/adb
+        key: adb-platform-tools-darwin-v1
+
+    - name: Download adb
+      if: steps.adb-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p PixelBackupApp/Sources/PixelBackup/Resources
+        curl -fsSL -o /tmp/pt.zip \
+          https://dl.google.com/android/repository/platform-tools-latest-darwin.zip
+        unzip -j /tmp/pt.zip platform-tools/adb \
+          -d PixelBackupApp/Sources/PixelBackup/Resources/
+        chmod +x PixelBackupApp/Sources/PixelBackup/Resources/adb
+
+    - name: Verify adb
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "adb version: $(PixelBackupApp/Sources/PixelBackup/Resources/adb version)"
