@@ -8,6 +8,8 @@
 "backup.state.done"            = "Completado";
 "backup.state.failed"          = "Error: %@";
 "backup.state.cancelled"       = "Cancelado";
+"backup.state.paused"          = "En pausa";
+"backup.state.paused_low_disk" = "En pausa — disco casi lleno";
 
 /* ── Notificaciones ── */
 "notification.backup.title.success"       = "Copia de seguridad completada";
@@ -35,7 +37,11 @@
 
 /* ── Progreso ── */
 "progress.cancel_button"                 = "Cancelar transferencia";
+"progress.pause_button"                  = "Pausar";
+"progress.resume_button"                 = "Reanudar";
 "progress.cancelled_info"               = "Transferencia cancelada. Vuelva a abrir la app para reanudar — los archivos ya copiados se omitirán.";
+"progress.paused_info"                  = "Transferencia en pausa. Reanude cuando quiera — los archivos ya copiados se omitirán.";
+"progress.paused_low_disk_info"         = "En pausa porque el destino está casi lleno. Libere espacio y reanude — los archivos ya copiados se omitirán.";
 
 /* ── Resumen ── */
 "summary.title"                          = "Copia de seguridad completada";

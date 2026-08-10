@@ -10,6 +10,11 @@ Remaining work across the project. Everything already implemented is tracked in 
 
 ## macOS App
 
+### Pause / disk safety (QA)
+- [ ] Pause mid-transfer → Resume continues and skips already-copied files
+- [ ] Low-disk soft-pause: with destination under `RUNTIME_FREE_SPACE_STOP_GB`, transfer pauses (not crash) and Resume works after freeing space
+- [ ] Low-disk warn does not spam a banner per file (at most once per healthcheck interval)
+
 ### Device Testing
 - [ ] Verify resume / skip logic — run a second time; already-copied files must be SKIP, not re-copied
 - [ ] Test cancel — press Cancel mid-transfer; confirm partial files are cleaned up and the SummaryCard appears with "Backup Cancelled" header showing files copied so far

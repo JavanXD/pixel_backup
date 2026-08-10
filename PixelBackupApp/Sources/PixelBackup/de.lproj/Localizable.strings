@@ -8,6 +8,8 @@
 "backup.state.done"            = "Fertig";
 "backup.state.failed"          = "Fehlgeschlagen: %@";
 "backup.state.cancelled"       = "Abgebrochen";
+"backup.state.paused"          = "Pausiert";
+"backup.state.paused_low_disk" = "Pausiert — Speicher fast voll";
 
 /* ── Benachrichtigungen ── */
 "notification.backup.title.success"       = "Sicherung abgeschlossen";
@@ -35,7 +37,11 @@
 
 /* ── Fortschritt ── */
 "progress.cancel_button"                 = "Übertragung abbrechen";
+"progress.pause_button"                  = "Pausieren";
+"progress.resume_button"                 = "Fortsetzen";
 "progress.cancelled_info"               = "Übertragung abgebrochen. App erneut starten um fortzufahren — bereits kopierte Dateien werden übersprungen.";
+"progress.paused_info"                  = "Übertragung pausiert. Jederzeit fortsetzen — bereits kopierte Dateien werden übersprungen.";
+"progress.paused_low_disk_info"         = "Pausiert, weil das Ziel fast voll ist. Speicher freigeben, dann fortsetzen — bereits kopierte Dateien werden übersprungen.";
 
 /* ── Zusammenfassung ── */
 "summary.title"                          = "Sicherung abgeschlossen";

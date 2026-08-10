@@ -40,6 +40,19 @@ final class BackupManager: ObservableObject {
     // overriding the final state with late-arriving log-line tasks.
     private var isTerminating = false
 
+    // Distinguishes user Pause vs Cancel when the script exits 130 (SIGINT).
+    private enum StopIntent { case none, cancel, pause }
+    private var stopIntent: StopIntent = .none
+
+    // Last successful start parameters — used by Resume after pause.
+    private struct LastRunParams {
+        let serial: String
+        let adbPath: String
+        let destRootBase: String
+        let folders: [RemoteFolder]
+    }
+    private var lastRun: LastRunParams?
+
     // Rolling throughput window (last 60 s)
     private struct SpeedSample { let time: Date; let copiedGB: Double }
     private var speedSamples: [SpeedSample] = []
@@ -82,6 +95,13 @@ final class BackupManager: ObservableObject {
             return
         }
 
+        lastRun = LastRunParams(
+            serial: serial,
+            adbPath: adbPath,
+            destRootBase: destRootBase,
+            folders: folders
+        )
+
         logLines = []
         hints = []
         progress = BackupProgress()
@@ -92,6 +112,7 @@ final class BackupManager: ObservableObject {
         elapsedSeconds = 0
         currentFile = ""
         isTerminating = false
+        stopIntent = .none
         startTime = Date()
         state = .resolvingDevice
 
@@ -180,13 +201,30 @@ final class BackupManager: ObservableObject {
         }
     }
 
-    // MARK: - Cancel
+    // MARK: - Pause / Cancel / Resume
+
+    func pause() {
+        guard let p = process, p.isRunning else { return }
+        stopIntent = .pause
+        p.interrupt()   // SIGINT → on_interrupt() in the script
+        state = .paused(reason: .user)
+    }
 
     func cancel() {
         guard let p = process, p.isRunning else { return }
-        p.interrupt()   // SIGINT → triggers on_interrupt() in the script
-        // terminationHandler will call BackupCoordinator.shared.didFinish()
+        stopIntent = .cancel
+        p.interrupt()   // SIGINT → on_interrupt() in the script
         state = .cancelled
+    }
+
+    func resume() {
+        guard case .paused = state, let last = lastRun else { return }
+        startBackup(
+            serial: last.serial,
+            adbPath: last.adbPath,
+            destRootBase: last.destRootBase,
+            folders: last.folders
+        )
     }
 
     // MARK: - Log handling
@@ -198,6 +236,10 @@ final class BackupManager: ObservableObject {
 
         let line = LogParser.parse(raw)
         appendLog(line)
+
+        // After Pause/Cancel, keep the log stream but do not override the stop state
+        // with late PROGRESS / COPY / FATAL lines.
+        guard stopIntent == .none else { return }
 
         switch line.level {
         case .copy:
@@ -216,13 +258,19 @@ final class BackupManager: ObservableObject {
             }
 
         case .hint, .warn:
-            hints.append(line.body)
+            // Dedupe: repeated low-disk / connectivity guidance must not flood banners.
+            if !hints.contains(line.body) {
+                hints.append(line.body)
+            }
 
         case .fatal, .error:
             state = .failed(message: line.body)
 
         case .info:
-            if let (count, _) = LogParser.parseScanComplete(line) {
+            if line.body.hasPrefix("PAUSED") {
+                // Script soft-paused (critically low disk) before exit 75 arrives.
+                state = .paused(reason: .lowDisk)
+            } else if let (count, _) = LogParser.parseScanComplete(line) {
                 scanFileCount += count
             } else if let dir = LogParser.parseScanningDir(line) {
                 currentDir = dir
@@ -291,6 +339,9 @@ final class BackupManager: ObservableObject {
         currentFile = ""
         BackupCoordinator.shared.didFinish()
 
+        let intent = stopIntent
+        stopIntent = .none
+
         switch exitCode {
         case 0:
             let summary = LogParser.parseSummary(from: logLines, destRoot: destRoot)
@@ -309,14 +360,22 @@ final class BackupManager: ObservableObject {
             etaSeconds = nil
             state = .done(summary: summary)
 
+        case 75:
+            // Soft-pause from critically low destination disk space.
+            speedMBps = 0
+            etaSeconds = nil
+            state = .paused(reason: .lowDisk)
+
         case 130:
-            // The script's on_interrupt() trap still prints a partial summary
-            // before exiting — show it as a SummaryCard so the user sees their
-            // progress instead of just a "Cancelled" label and log tail.
-            if var summary = LogParser.parseSummary(from: logLines, destRoot: destRoot) {
+            // SIGINT — user Pause or Cancel (app sets stopIntent before interrupt).
+            speedMBps = 0
+            etaSeconds = nil
+            if intent == .pause {
+                state = .paused(reason: .user)
+            } else if var summary = LogParser.parseSummary(from: logLines, destRoot: destRoot) {
+                // The script's on_interrupt() still prints a partial summary —
+                // show it as a SummaryCard so the user sees progress so far.
                 summary.wasCancelled = true
-                speedMBps = 0
-                etaSeconds = nil
                 state = .done(summary: summary)
             } else {
                 state = .cancelled
@@ -324,6 +383,8 @@ final class BackupManager: ObservableObject {
 
         default:
             if case .failed = state { break }
+            if case .paused = state { break }
+            if case .cancelled = state { break }
             state = .failed(message: "Script exited with code \(exitCode). See log for details.")
         }
     }

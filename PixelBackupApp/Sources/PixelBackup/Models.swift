@@ -13,6 +13,11 @@ struct AndroidDevice: Identifiable, Equatable {
 
 // MARK: - Backup state machine
 
+enum PauseReason: Equatable {
+    case user
+    case lowDisk
+}
+
 enum BackupState: Equatable {
     case idle
     case resolvingDevice
@@ -23,6 +28,7 @@ enum BackupState: Equatable {
     case done(summary: BackupSummary)
     case failed(message: String)
     case cancelled
+    case paused(reason: PauseReason)
 
     var isRunning: Bool {
         switch self {
@@ -33,7 +39,7 @@ enum BackupState: Equatable {
 
     var isTerminal: Bool {
         switch self {
-        case .cancelled, .failed: return true
+        case .cancelled, .failed, .paused: return true
         default: return false
         }
     }
@@ -50,6 +56,11 @@ enum BackupState: Equatable {
         case .done:                        return L10n("backup.state.done")
         case .failed(let msg):             return L10n("backup.state.failed", msg)
         case .cancelled:                   return L10n("backup.state.cancelled")
+        case .paused(let reason):
+            switch reason {
+            case .user:    return L10n("backup.state.paused")
+            case .lowDisk: return L10n("backup.state.paused_low_disk")
+            }
         }
     }
 }

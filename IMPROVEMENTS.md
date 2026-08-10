@@ -187,8 +187,8 @@ This is applied to all adb calls globally, preventing any adb invocation from ac
 ### Runtime disk guard
 
 Added `runtime_free_space_guard()` called before each file copy and on the progress heartbeat:
-- Warns when free space drops below `RUNTIME_FREE_SPACE_WARN_GB` (default 15GB).
-- Aborts when free space drops critically low: `RUNTIME_FREE_SPACE_STOP_GB` (default 2GB).
+- Warns when free space drops below `RUNTIME_FREE_SPACE_WARN_GB` (default 15GB), throttled to once per `HEALTHCHECK_INTERVAL_SECONDS`.
+- Soft-pauses (exit 75) when free space drops critically low: `RUNTIME_FREE_SPACE_STOP_GB` (default 2GB) — progress is saved; the app shows Resume instead of treating it as a fatal crash.
 
 This catches disk pressure caused by other processes filling the Mac while the transfer is running.
 
@@ -347,7 +347,7 @@ For a backup folder where most files are already done, every skipped file produc
 | `PROGRESS_EVERY_FILES` | `200` | Progress log interval |
 | `CHECK_FREE_SPACE_DURING_COPY` | `1` | Runtime disk guard |
 | `RUNTIME_FREE_SPACE_WARN_GB` | `15` | Warn threshold |
-| `RUNTIME_FREE_SPACE_STOP_GB` | `2` | Abort threshold |
+| `RUNTIME_FREE_SPACE_STOP_GB` | `2` | Soft-pause threshold (exit 75) |
 | `PRECHECK_FREE_SPACE` | `1` | `0`=off, `1`=fast, `2`=full estimate |
 | `FREE_SPACE_BUFFER_GB` | `10` | Minimum free space headroom |
 | `PRECHECK_MAX_SECONDS` | `120` | Full-estimate timeout (mode 2) |

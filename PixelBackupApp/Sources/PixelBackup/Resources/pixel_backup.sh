@@ -63,6 +63,7 @@ PRECHECK_MAX_SECONDS="${PRECHECK_MAX_SECONDS:-120}"
 # Runtime operator feedback
 SHOW_RUNTIME_HINTS="${SHOW_RUNTIME_HINTS:-1}"
 LAST_HEALTH_HINT_TS=0
+LAST_DISK_WARN_TS=0
 
 # Progress and runtime guardrails
 PROGRESS_EVERY_FILES="${PROGRESS_EVERY_FILES:-200}"
@@ -143,6 +144,22 @@ on_interrupt() {
     summary 2>/dev/null || true
   fi
   exit 130
+}
+
+# Soft-pause when destination disk is critically low (exit 75).
+# Unlike die(), this preserves the manifest and prints a partial summary so
+# the caller (or a later rerun) can resume without re-copying finished files.
+on_pause_low_disk() {
+  local free_gb="$1"
+  echo ""
+  log "PAUSED  Destination free space critically low (${free_gb} GB)."
+  log "HINT  Free up space on the Mac, then resume — already-copied files will be skipped."
+  cleanup_temp_files
+  if [[ -n "${MANIFEST}" && -f "${MANIFEST}" ]]; then
+    log "Partial progress saved — resume when space is available."
+    summary 2>/dev/null || true
+  fi
+  exit 75
 }
 
 cleanup_temp_files() {
@@ -234,7 +251,7 @@ runtime_hint() {
       ;;
     low_disk)
       log "HINT  Low free disk space detected at destination. Free space may be insufficient for remaining files."
-      log "HINT  Free space on Mac or stop other large writes, then rerun."
+      log "HINT  Free space on the Mac or stop other large writes, then resume — already-copied files will be skipped."
       ;;
     high_failures)
       log "HINT  Failure count is rising. Possible causes: phone lock, unstable cable/hub, storage full, or flaky USB mode."
@@ -499,7 +516,7 @@ free_bytes_dest() {
 }
 
 runtime_free_space_guard() {
-  local free_bytes warn_bytes stop_bytes free_gb
+  local free_bytes warn_bytes stop_bytes free_gb now
   [[ "${CHECK_FREE_SPACE_DURING_COPY}" == "1" ]] || return 0
 
   free_bytes="$(free_bytes_dest)"
@@ -508,12 +525,16 @@ runtime_free_space_guard() {
   free_gb="$(bytes_to_gb "$free_bytes")"
 
   if (( free_bytes <= stop_bytes )); then
-    runtime_hint "low_disk"
-    die "Destination free space critically low (${free_gb} GB). Aborting to avoid partial-run churn."
+    on_pause_low_disk "$free_gb"
   fi
   if (( free_bytes <= warn_bytes )); then
-    log "WARN  Low destination free space: ${free_gb} GB remaining."
-    runtime_hint "low_disk"
+    # Throttle WARN + hint so large transfers don't spam once under the warn floor.
+    now="$(date +%s)"
+    if (( now - LAST_DISK_WARN_TS >= HEALTHCHECK_INTERVAL_SECONDS )); then
+      LAST_DISK_WARN_TS="$now"
+      log "WARN  Low destination free space: ${free_gb} GB remaining."
+      runtime_hint "low_disk"
+    fi
   fi
 }
 

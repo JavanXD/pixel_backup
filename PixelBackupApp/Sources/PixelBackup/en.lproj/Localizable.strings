@@ -8,6 +8,8 @@
 "backup.state.done"            = "Done";
 "backup.state.failed"          = "Failed: %@";
 "backup.state.cancelled"       = "Cancelled";
+"backup.state.paused"          = "Paused";
+"backup.state.paused_low_disk" = "Paused — disk almost full";
 
 /* ── Notifications ── */
 "notification.backup.title.success"       = "Backup Complete";
@@ -35,7 +37,11 @@
 
 /* ── Progress ── */
 "progress.cancel_button"                 = "Cancel Transfer";
+"progress.pause_button"                  = "Pause";
+"progress.resume_button"                 = "Resume";
 "progress.cancelled_info"               = "Transfer cancelled. Rerun the app to resume — already-copied files will be skipped.";
+"progress.paused_info"                  = "Transfer paused. Resume anytime — already-copied files will be skipped.";
+"progress.paused_low_disk_info"         = "Paused because the destination is almost full. Free up space, then resume — already-copied files will be skipped.";
 
 /* ── Summary card ── */
 "summary.title"                          = "Backup Complete";

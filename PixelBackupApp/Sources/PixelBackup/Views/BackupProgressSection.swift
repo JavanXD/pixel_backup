@@ -11,6 +11,8 @@ struct BackupProgressSection: View {
     let elapsedSeconds: Int
     let currentFile: String
     let onCancel: () -> Void
+    var onPause: (() -> Void)? = nil
+    var onResume: (() -> Void)? = nil
     var onNewBackup: (() -> Void)? = nil
 
     var body: some View {
@@ -35,7 +37,7 @@ struct BackupProgressSection: View {
             }
 
             // Progress bar + counters
-            if state.isRunning || state == .cancelled {
+            if state.isRunning || state == .cancelled || isPaused {
                 progressStats
             }
 
@@ -45,14 +47,22 @@ struct BackupProgressSection: View {
             LogView(lines: logLines)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Cancel button
+            // Pause + Cancel while running
             if state.isRunning {
                 HStack {
                     Spacer()
+                    if let onPause {
+                        Button {
+                            onPause()
+                        } label: {
+                            Label(L10n("progress.pause_button"), systemImage: "pause.circle")
+                        }
+                        .buttonStyle(.bordered)
+                    }
                     Button(role: .destructive) {
                         onCancel()
                     } label: {
-                        Label("Cancel Transfer", systemImage: "stop.circle")
+                        Label(L10n("progress.cancel_button"), systemImage: "stop.circle")
                     }
                     .buttonStyle(.bordered)
                 }
@@ -72,22 +82,56 @@ struct BackupProgressSection: View {
                 }
             }
         }
+        if case .paused(let reason) = state {
+            HStack {
+                Label(pausedInfo(reason), systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if let onResume {
+                    Button { onResume() } label: {
+                        Label(L10n("progress.resume_button"), systemImage: "play.circle.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                }
+                if let restart = onNewBackup {
+                    Button { restart() } label: {
+                        Label(L10n("summary.new_backup_button"), systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+        }
         if state == .cancelled {
             HStack {
-                Label("Cancelled — already-copied files will be skipped on the next run.",
+                Label(L10n("progress.cancelled_info"),
                       systemImage: "info.circle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
                 if let restart = onNewBackup {
                     Button { restart() } label: {
-                        Label("New Backup", systemImage: "arrow.clockwise")
+                        Label(L10n("summary.new_backup_button"), systemImage: "arrow.clockwise")
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)
                 }
             }
         }
+        }
+    }
+
+    private var isPaused: Bool {
+        if case .paused = state { return true }
+        return false
+    }
+
+    private func pausedInfo(_ reason: PauseReason) -> String {
+        switch reason {
+        case .user:    return L10n("progress.paused_info")
+        case .lowDisk: return L10n("progress.paused_low_disk_info")
         }
     }
 
@@ -195,6 +239,7 @@ struct BackupProgressSection: View {
         case .finishing:        return "checkmark.circle"
         case .resolvingDevice:  return "cable.connector"
         case .cancelled:        return "stop.circle"
+        case .paused:           return "pause.circle"
         case .failed:           return "xmark.octagon"
         default:                return "arrow.down.circle"
         }
@@ -204,6 +249,7 @@ struct BackupProgressSection: View {
         switch state {
         case .failed:    return .red
         case .cancelled: return .orange
+        case .paused:    return .orange
         default:         return .blue
         }
     }

@@ -99,6 +99,8 @@ struct ContentView: View {
                 elapsedSeconds: backupManager.elapsedSeconds,
                 currentFile: backupManager.currentFile,
                 onCancel: { backupManager.cancel() },
+                onPause: { backupManager.pause() },
+                onResume: { backupManager.resume() },
                 onNewBackup: { backupManager.state = .idle }
             )
             .padding()
