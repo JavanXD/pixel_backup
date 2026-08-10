@@ -117,11 +117,11 @@ echo "✅ App bundle: $APP_BUNDLE"
 
 # ─── Install to /Applications ────────────────────────────────────────────────
 INSTALL_DEST="/Applications/$APP_NAME.app"
-echo "▶ Installing to $INSTALL_DEST…"
+echo "▶ Installing to ${INSTALL_DEST}…"
 rm -rf "$INSTALL_DEST"
-cp -r "$APP_BUNDLE" /Applications/
+cp -R "$APP_BUNDLE" /Applications/
 touch "$INSTALL_DEST"           # nudge Finder to refresh the icon
-echo "✅ Installed: $INSTALL_DEST"
+echo "✅ Installed: ${INSTALL_DEST}"
 
 # ─── DMG (release only) ──────────────────────────────────────────────────────
 if [[ $RELEASE -eq 1 ]]; then
