@@ -16,6 +16,7 @@ struct ContentView: View {
     @State private var showHistory = false
     @State private var isDragTargeted = false
     @State private var lastBackupRecord: BackupRecord? = nil
+    @State private var unfinishedForDevice: BackupRecord? = nil
 
     var body: some View {
         VStack(spacing: 12) {
@@ -64,8 +65,13 @@ struct ContentView: View {
                 // Use popover so it always anchors to this button on the
                 // correct screen, even in multi-display setups.
                 .popover(isPresented: $showHistory, arrowEdge: .bottom) {
-                    BackupHistoryView(destRootBase: destRootBase)
-                        .frame(minWidth: 540, minHeight: 380)
+                    BackupHistoryView(
+                        destRootBase: destRootBase,
+                        onContinue: { record in
+                            startBackup(into: record.path)
+                        }
+                    )
+                    .frame(minWidth: 540, minHeight: 380)
                 }
 
                 Button {
@@ -134,6 +140,10 @@ struct ContentView: View {
             // Destination
             DestinationPickerView(destRootBase: $destRootBase)
 
+            if let unfinished = unfinishedForDevice {
+                unfinishedBanner(unfinished)
+            }
+
             Spacer()
 
             // Last backup summary strip
@@ -149,16 +159,41 @@ struct ContentView: View {
                 }
                 Spacer()
                 let canStart = selectedSerial != nil && !folders.filter(\.enabled).isEmpty
-                Button {
-                    startBackup()
-                } label: {
-                    Label("Start Backup", systemImage: "arrow.down.circle.fill")
-                        .font(.body.bold())
+                if unfinishedForDevice != nil {
+                    Button {
+                        startBackup(into: nil)   // today's new dated folder
+                    } label: {
+                        Label("Start New Today", systemImage: "calendar.badge.plus")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .disabled(!canStart)
+
+                    Button {
+                        if let path = unfinishedForDevice?.path {
+                            startBackup(into: path)
+                        }
+                    } label: {
+                        Label("Continue Unfinished", systemImage: "play.circle.fill")
+                            .font(.body.bold())
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orange)
+                    .controlSize(.large)
+                    .disabled(!canStart)
+                    .keyboardShortcut(.return, modifiers: .command)
+                } else {
+                    Button {
+                        startBackup(into: nil)
+                    } label: {
+                        Label("Start Backup", systemImage: "arrow.down.circle.fill")
+                            .font(.body.bold())
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(!canStart)
+                    .keyboardShortcut(.return, modifiers: .command)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(!canStart)
-                .keyboardShortcut(.return, modifiers: .command)
             }
         }
         .padding(24)
@@ -182,8 +217,42 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.15), value: isDragTargeted)
-        .onAppear { loadLastBackup() }
-        .onChange(of: destRootBase) { _ in loadLastBackup() }
+        .onAppear {
+            loadLastBackup()
+            refreshUnfinished()
+        }
+        .onChange(of: destRootBase) { _ in
+            loadLastBackup()
+            refreshUnfinished()
+        }
+        .onChange(of: selectedSerial) { _ in refreshUnfinished() }
+    }
+
+    @ViewBuilder
+    private func unfinishedBanner(_ record: BackupRecord) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Unfinished backup from \(record.month) \(record.day)")
+                    .font(.subheadline.bold())
+                Text("\(record.fileCount) files · \(record.sizeLabel) already copied. Continue into that folder instead of starting a new dated one.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Button("History") { showHistory = true }
+                .font(.caption)
+                .buttonStyle(.borderless)
+        }
+        .padding(12)
+        .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.orange.opacity(0.35), lineWidth: 1)
+        )
     }
 
     // MARK: - Last backup strip
@@ -221,17 +290,24 @@ struct ContentView: View {
             guard let name = latest else { return }
             let path = "\(base)/\(name)"
             var record = BackupRecord(folderName: name, path: path)
-            // Read from manifest for speed
-            let manifestPath = "\(path)/.transfer_meta/manifest.tsv"
-            if let content = try? String(contentsOfFile: manifestPath, encoding: .utf8) {
-                let lines = content.split(separator: "\n", omittingEmptySubsequences: true)
-                var bytes: Int64 = 0
-                for line in lines { bytes += Int64(line.prefix(while: { $0 != "\t" })) ?? 0 }
-                record.fileCount = lines.count
-                record.sizeBytes = bytes
-            }
+            let (count, bytes) = BackupFolderIndex.manifestStats(at: path)
+            record.fileCount = count
+            record.sizeBytes = bytes
+            record.isIncomplete = BackupFolderIndex.looksIncomplete(at: path)
             let finalRecord = record
             await MainActor.run { lastBackupRecord = finalRecord }
+        }
+    }
+
+    private func refreshUnfinished() {
+        guard let serial = selectedSerial else {
+            unfinishedForDevice = nil
+            return
+        }
+        let base = destRootBase
+        Task.detached(priority: .utility) {
+            let found = BackupFolderIndex.resumeCandidate(in: base, matchingSerial: serial)
+            await MainActor.run { unfinishedForDevice = found }
         }
     }
 
@@ -249,13 +325,14 @@ struct ContentView: View {
         return true
     }
 
-    private func startBackup() {
+    private func startBackup(into destRootOverride: String?) {
         guard let serial = selectedSerial else { return }
         backupManager.startBackup(
             serial: serial,
             adbPath: deviceManager.adbPath,
             destRootBase: destRootBase,
-            folders: folders
+            folders: folders,
+            destRootOverride: destRootOverride
         )
     }
 }

@@ -26,8 +26,7 @@ When something changes, update the file that matches the intent:
 ## [Unreleased]
 
 ### Added
-- Pause and Resume during an active backup (soft pause: stops cleanly, Resume skips already-copied files)
-- Soft-pause when destination free space drops below the critical threshold (exit 75) instead of aborting
+- `PrivacyInfo.xcprivacy` privacy manifest (UserDefaults CA92.1; no tracking / no collected data)
 - `Documents` added as a default copy folder
 - App icon — custom 1024×1024 design with all required macOS sizes bundled as `AppIcon.icns`
 - `build.sh` now auto-installs the built `.app` to `/Applications` after every build (removes the old copy first to prevent nesting)
@@ -48,9 +47,7 @@ When something changes, update the file that matches the intent:
 - `--help` flag on `pixel_backup.sh` prints all environment variable parameters
 
 ### Changed
-- Low-disk runtime warnings are throttled (once per healthcheck interval) so they no longer spam every file
-- Hint banners in the app dedupe identical messages
-- Critically low destination space soft-pauses with a Resume path instead of a fatal abort
+- Release CI builds a universal binary (arm64 + x86_64 via `lipo`) and injects the tag version into `Info.plist`
 - Backup history now reads `.transfer_meta/manifest.tsv` instead of walking every file — critical performance fix for large backups (18k stat() calls → 1 file read)
 - Multiple independent windows (`⌘N`) — each window owns its own `BackupManager` so two devices can be backed up simultaneously
 - Menu bar replaced SwiftUI `MenuBarExtra` with `NSApplicationDelegate`-managed `NSStatusItem` — fixes context menu appearing on the wrong display in multi-monitor setups
@@ -58,8 +55,6 @@ When something changes, update the file that matches the intent:
 - `sanitize_name()` now strips Unicode, emoji, and multi-byte characters; TCP/IP serials (containing colons) are sanitised for use in macOS paths
 
 ### Fixed
-- Low-disk WARN spam during transfer: each file under the warn threshold produced a new hint banner; warnings are now throttled and banners dedupe identical text
-- Critically low destination disk no longer fatal-aborts the backup; the run soft-pauses so progress is kept and Resume can continue after freeing space
 - App crash near backup summary caused by `@MainActor` isolation: `DispatchQueue.main.async` replaced with `Task { @MainActor in }` in termination handler
 - Thread-safety warning in `readabilityHandler` — buffer access confined to a dedicated serial `DispatchQueue`
 - `NotificationManager` crash when running via `swift run` without a bundle identifier
@@ -68,6 +63,25 @@ When something changes, update the file that matches the intent:
 - **Cancelled summary not shown**: clicking Cancel while the script was in progress showed only the raw log tail; `handleTermination(exit 130)` now parses the partial summary that `on_interrupt()` prints and transitions to `.done(summary:)` with `wasCancelled = true` — so the structured SummaryCard appears with a "Backup Cancelled" header and a "Back" button
 - **State race after completion**: log-line tasks still queued on the main actor when `handleTermination` fires could overwrite `.done(summary:)` with `.failed`; `isTerminating` flag prevents this
 - **`readabilityHandler` resource leak**: the pipe's file handle handler was never set to `nil` after process exit; it is now cleared at the start of `handleTermination`
+
+---
+
+## [1.1.0] — 2026-08-12
+
+### Added
+- Pause and Resume during an active backup (soft pause: stops cleanly, Resume skips already-copied files)
+- Soft-pause when destination free space drops below the critical threshold (exit 75) instead of aborting
+- Continue unfinished backups from a previous date — resume into the old dated folder instead of creating today's new one (config banner + History Continue)
+- `DEST_ROOT_OVERRIDE` env var / `.transfer_meta/run_status` so runs can target an existing folder and record complete/paused/interrupted/failed
+
+### Changed
+- Low-disk runtime warnings are throttled (once per healthcheck interval) so they no longer spam every file
+- Hint banners in the app dedupe identical messages
+- Critically low destination space soft-pauses with a Resume path instead of a fatal abort
+
+### Fixed
+- Low-disk WARN spam during transfer: each file under the warn threshold produced a new hint banner; warnings are now throttled and banners dedupe identical text
+- Critically low destination disk no longer fatal-aborts the backup; the run soft-pauses so progress is kept and Resume can continue after freeing space
 
 ---
 

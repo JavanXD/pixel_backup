@@ -83,6 +83,12 @@ if [[ -f "$ICON_SRC" ]]; then
     cp "$ICON_SRC" "$CONTENTS/Resources/AppIcon.icns"
 fi
 
+# Privacy manifest (required by Apple for UserDefaults / filesystem / network APIs)
+PRIVACY_SRC="$SCRIPT_DIR/Sources/PixelBackup/Resources/PrivacyInfo.xcprivacy"
+if [[ -f "$PRIVACY_SRC" ]]; then
+    cp "$PRIVACY_SRC" "$CONTENTS/Resources/PrivacyInfo.xcprivacy"
+fi
+
 # ─── Code sign ───────────────────────────────────────────────────────────────
 if [[ $RELEASE -eq 1 ]]; then
     if [[ -z "${DEVELOPER_ID:-}" ]]; then

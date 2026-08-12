@@ -103,7 +103,9 @@ Each backup run creates a dated subfolder:
         └── transfer.log       # full timestamped log
 ```
 
-Running again on the **same day** resumes into the same folder. A **new date** always creates a new folder, so you get a clean history you can browse by date.
+Running again on the **same day** resumes into the same folder. A **new date** normally creates a new folder.
+
+If a previous run did not finish (disk full, pause, cancel, crash), the app offers **Continue Unfinished** so today can finish into that older dated folder — already-copied files are skipped. You can also open **History** and press **Continue** / **Add to** on any past backup.
 
 ---
 

@@ -52,8 +52,27 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-spm-release-
 
-      - name: Build (release)
-        run: swift build -c release --package-path PixelBackupApp
+      - name: Inject version into Info.plist
+        run: |
+          /usr/libexec/PlistBuddy -c \
+            "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" \
+            PixelBackupApp/Sources/PixelBackup/Info.plist
+          /usr/libexec/PlistBuddy -c \
+            "Set :CFBundleVersion ${{ github.run_number }}" \
+            PixelBackupApp/Sources/PixelBackup/Info.plist
+          echo "CFBundleShortVersionString=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' PixelBackupApp/Sources/PixelBackup/Info.plist)"
+          echo "CFBundleVersion=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' PixelBackupApp/Sources/PixelBackup/Info.plist)"
+
+      - name: Build universal binary (arm64 + x86_64)
+        run: |
+          set -euo pipefail
+          swift build -c release --arch arm64  --package-path PixelBackupApp
+          swift build -c release --arch x86_64 --package-path PixelBackupApp
+          mkdir -p PixelBackupApp/.build/release
+          lipo -create -output PixelBackupApp/.build/release/PixelBackup \
+            PixelBackupApp/.build/arm64-apple-macosx/release/PixelBackup \
+            PixelBackupApp/.build/x86_64-apple-macosx/release/PixelBackup
+          lipo -info PixelBackupApp/.build/release/PixelBackup
 
       - name: Assemble PixelBackup.app
         run: |
@@ -64,13 +83,32 @@ jobs:
           cp PixelBackupApp/.build/release/PixelBackup "$CONTENTS/MacOS/PixelBackup"
           cp PixelBackupApp/Sources/PixelBackup/Info.plist "$CONTENTS/Info.plist"
 
-          BUILT_RES="PixelBackupApp/.build/release/PixelBackup_PixelBackup.bundle/Contents/Resources"
-          if [ -d "$BUILT_RES" ]; then
-            cp -r "$BUILT_RES/"* "$CONTENTS/Resources/"
+          # Multi-arch builds place the resource bundle under the arch-specific dir.
+          BUILT_RES=""
+          for candidate in \
+            "PixelBackupApp/.build/arm64-apple-macosx/release/PixelBackup_PixelBackup.bundle/Contents/Resources" \
+            "PixelBackupApp/.build/x86_64-apple-macosx/release/PixelBackup_PixelBackup.bundle/Contents/Resources" \
+            "PixelBackupApp/.build/release/PixelBackup_PixelBackup.bundle/Contents/Resources"
+          do
+            if [ -d "$candidate" ]; then
+              BUILT_RES="$candidate"
+              break
+            fi
+          done
+
+          if [ -n "$BUILT_RES" ]; then
+            cp -R "$BUILT_RES/"* "$CONTENTS/Resources/"
           else
             cp PixelBackupApp/Sources/PixelBackup/Resources/adb           "$CONTENTS/Resources/adb"
             cp PixelBackupApp/Sources/PixelBackup/Resources/pixel_backup.sh "$CONTENTS/Resources/pixel_backup.sh"
           fi
+
+          # Privacy manifest must live at Contents/Resources/PrivacyInfo.xcprivacy
+          if [ -f PixelBackupApp/Sources/PixelBackup/Resources/PrivacyInfo.xcprivacy ]; then
+            cp PixelBackupApp/Sources/PixelBackup/Resources/PrivacyInfo.xcprivacy \
+              "$CONTENTS/Resources/PrivacyInfo.xcprivacy"
+          fi
+
           chmod +x "$CONTENTS/Resources/adb"
           chmod +x "$CONTENTS/Resources/pixel_backup.sh"
 

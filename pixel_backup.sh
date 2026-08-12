@@ -22,6 +22,8 @@ set -euo pipefail
 
 # Base destination; each device gets its own subdirectory by default
 DEST_ROOT_BASE="${DEST_ROOT_BASE:-${HOME}/Pictures/pixel_backup}"
+# Optional: resume into an existing dated folder (set by the macOS app).
+DEST_ROOT_OVERRIDE="${DEST_ROOT_OVERRIDE:-}"
 
 # Device targeting:
 #   DEVICE_SERIAL=<serial>         # target one specific device
@@ -133,6 +135,11 @@ USAGE
   DEST_ROOT_BASE         Root folder on the Mac where backups are saved.
                          A dated per-device subdirectory is created inside.
                                                 default: ~/Pictures/pixel_backup
+
+  DEST_ROOT_OVERRIDE     Absolute path to an existing backup folder. When set,
+                         resume into that folder (skip already-copied files)
+                         instead of creating today's dated folder.
+                         Used by the macOS app for unfinished backups.
 
 ━━━ FOLDERS TO COPY ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -256,6 +263,7 @@ require_cmd() {
 
 die() {
   log "FATAL $*"
+  write_run_status "failed"
   exit 1
 }
 
@@ -275,6 +283,7 @@ on_error() {
 on_interrupt() {
   echo ""
   log "INTERRUPTED  Transfer cancelled by user (Ctrl+C)."
+  write_run_status "interrupted"
   cleanup_temp_files
   if [[ -n "${MANIFEST}" && -f "${MANIFEST}" ]]; then
     log "Partial progress saved — rerun to resume."
@@ -291,6 +300,7 @@ on_pause_low_disk() {
   echo ""
   log "PAUSED  Destination free space critically low (${free_gb} GB)."
   log "HINT  Free up space on the Mac, then resume — already-copied files will be skipped."
+  write_run_status "paused"
   cleanup_temp_files
   if [[ -n "${MANIFEST}" && -f "${MANIFEST}" ]]; then
     log "Partial progress saved — resume when space is available."
@@ -627,7 +637,10 @@ setup_device_paths() {
   # Sanitize the serial too — TCP/IP adb serials contain colons
   # (e.g. "192.168.1.5:5555") which are illegal in macOS paths.
   safe_serial="$(sanitize_name "${CURRENT_SERIAL}")"
-  if [[ "${SEPARATE_DEVICE_DIRS}" == "1" ]]; then
+  if [[ -n "${DEST_ROOT_OVERRIDE}" ]]; then
+    # Resume / continue into a specific existing backup folder (may be an older date).
+    DEST_ROOT="${DEST_ROOT_OVERRIDE}"
+  elif [[ "${SEPARATE_DEVICE_DIRS}" == "1" ]]; then
     DEST_ROOT="${DEST_ROOT_BASE}/${run_date}_${CURRENT_DEVICE_NAME}_${safe_serial}"
   else
     DEST_ROOT="${DEST_ROOT_BASE}"
@@ -637,9 +650,21 @@ setup_device_paths() {
   FAILED="${TMP_DIR}/failed.tsv"
   LOG="${TMP_DIR}/transfer.log"
   RUN_MANIFEST="${TMP_DIR}/manifest_run.tsv"
+  RUN_STATUS="${TMP_DIR}/run_status"
 
   mkdir -p "${DEST_ROOT}" "${TMP_DIR}"
   touch "${MANIFEST}" "${RUN_MANIFEST}" "${FAILED}" "${LOG}"
+  write_run_status "running"
+  if [[ -n "${DEST_ROOT_OVERRIDE}" ]]; then
+    log "Resuming into existing backup folder: ${DEST_ROOT}"
+  fi
+}
+
+write_run_status() {
+  local status="$1"
+  [[ -n "${TMP_DIR:-}" ]] || return 0
+  mkdir -p "${TMP_DIR}" 2>/dev/null || true
+  printf '%s\n' "${status}" > "${TMP_DIR}/run_status" 2>/dev/null || true
 }
 
 bytes_to_gb() {
@@ -1014,6 +1039,7 @@ run_for_current_device() {
   retry_failed_once
   cleanup_temp_files
   summary
+  write_run_status "complete"
 }
 
 declare -a TARGET_DEVICE_SERIALS=()

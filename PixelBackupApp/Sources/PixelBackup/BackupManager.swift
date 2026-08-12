@@ -50,6 +50,7 @@ final class BackupManager: ObservableObject {
         let adbPath: String
         let destRootBase: String
         let folders: [RemoteFolder]
+        let destRootOverride: String?
     }
     private var lastRun: LastRunParams?
 
@@ -86,7 +87,8 @@ final class BackupManager: ObservableObject {
         serial: String,
         adbPath: String,
         destRootBase: String,
-        folders: [RemoteFolder]
+        folders: [RemoteFolder],
+        destRootOverride: String? = nil
     ) {
         guard !state.isRunning else { return }
 
@@ -99,7 +101,8 @@ final class BackupManager: ObservableObject {
             serial: serial,
             adbPath: adbPath,
             destRootBase: destRootBase,
-            folders: folders
+            folders: folders,
+            destRootOverride: destRootOverride
         )
 
         logLines = []
@@ -131,9 +134,10 @@ final class BackupManager: ObservableObject {
 
         let adbDir = URL(fileURLWithPath: adbPath).deletingLastPathComponent().path
         let enabledFolders = folders.filter(\.enabled).map(\.remoteName).joined(separator: ":")
-        destRoot = destRootBase
+        // Progress/summary dest label: show the concrete folder when resuming.
+        destRoot = destRootOverride ?? destRootBase
 
-        let env: [String: String] = [
+        var env: [String: String] = [
             "PATH": "\(adbDir):/usr/bin:/bin:/usr/sbin:/sbin",
             "DEVICE_SERIAL": serial,
             "DEST_ROOT_BASE": destRootBase,
@@ -144,6 +148,9 @@ final class BackupManager: ObservableObject {
             "HEALTHCHECK_INTERVAL_SECONDS": "30",
             "TERM": "dumb",
         ]
+        if let override = destRootOverride, !override.isEmpty {
+            env["DEST_ROOT_OVERRIDE"] = override
+        }
 
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/bin/bash")
@@ -223,7 +230,8 @@ final class BackupManager: ObservableObject {
             serial: last.serial,
             adbPath: last.adbPath,
             destRootBase: last.destRootBase,
-            folders: last.folders
+            folders: last.folders,
+            destRootOverride: last.destRootOverride
         )
     }
 

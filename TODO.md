@@ -14,6 +14,8 @@ Remaining work across the project. Everything already implemented is tracked in 
 - [ ] Pause mid-transfer → Resume continues and skips already-copied files
 - [ ] Low-disk soft-pause: with destination under `RUNTIME_FREE_SPACE_STOP_GB`, transfer pauses (not crash) and Resume works after freeing space
 - [ ] Low-disk warn does not spam a banner per file (at most once per healthcheck interval)
+- [ ] Continue unfinished: an older dated incomplete folder for the connected device shows "Continue Unfinished" and writes into that folder (not today's)
+- [ ] History → Continue / Add to resumes into the chosen dated folder
 
 ### Device Testing
 - [ ] Verify resume / skip logic — run a second time; already-copied files must be SKIP, not re-copied
@@ -30,13 +32,19 @@ which is architecturally incompatible with executing a bundled `adb` binary and 
 user-chosen folders (see **App Store** section below for details).
 
 ### Step 2 — Apple Developer Program
-- [ ] Enrol at [developer.apple.com](https://developer.apple.com) ($99/yr)
+- [x] Enrol at [developer.apple.com](https://developer.apple.com) ($99/yr)
+  *(Team `23KDS46W6C` — same personal team as ClipDictate; keychain has `Apple Development: Javan Rasokat (3AD66N4HYL)`)*
 - [ ] Register bundle ID `com.pixelbackup.app` in the Developer Portal
+  *(not verified locally — confirm under Certificates, Identifiers & Profiles → Identifiers)*
 - [ ] Create a **Developer ID Application** certificate (not Mac App Distribution)
+  *(not in keychain; ClipDictate also still uses Apple Development only — no `Developer ID Application: …` identity found)*
 - [ ] Export certificate as `.p12` with a password
+  *(no Developer ID `.p12` found under Projects / Downloads / Documents / Desktop; only unrelated Endor/pynt certs)*
 
 ### Step 3 — Add CI/CD secrets to GitHub repository
 > Settings → Secrets and variables → Actions → New repository secret
+>
+> Needs the Developer ID `.p12` from Step 2. `NOTARY_TEAM` for this account is `23KDS46W6C`.
 
 | Secret name | Value |
 |---|---|
@@ -45,87 +53,38 @@ user-chosen folders (see **App Store** section below for details).
 | `DEVELOPER_ID_CERT_PASSWORD` | Password used when exporting the `.p12` |
 | `KEYCHAIN_PASSWORD` | Any strong password (used only in CI keychain) |
 | `APPLE_ID` | Your Apple ID email |
-| `NOTARY_TEAM` | 10-character Team ID from developer.apple.com |
+| `NOTARY_TEAM` | `23KDS46W6C` |
 | `NOTARY_PASSWORD` | App-specific password from [appleid.apple.com](https://appleid.apple.com) |
 
 ### Step 4 — Universal binary (arm64 + x86_64)
-- [ ] Update `release.yml` CI to build a fat/universal binary so the DMG runs on both
-  Apple Silicon and Intel Macs without separate downloads:
-  ```yaml
-  - name: Build universal binary
-    run: |
-      swift build -c release --arch arm64  --package-path PixelBackupApp
-      swift build -c release --arch x86_64 --package-path PixelBackupApp
-      lipo -create -output PixelBackupApp/.build/release/PixelBackup \
-        PixelBackupApp/.build/arm64-apple-macosx/release/PixelBackup \
-        PixelBackupApp/.build/x86_64-apple-macosx/release/PixelBackup
-  ```
+- [x] Update `release.yml` CI to build a fat/universal binary (`swift build` per arch + `lipo`)
 
 ### Step 5 — Version injection in CI
-- [ ] Update `release.yml` to write the tag version into `Info.plist` before building,
-  so `CFBundleShortVersionString` and `CFBundleVersion` match the release tag:
-  ```yaml
-  - name: Inject version
-    run: |
-      /usr/libexec/PlistBuddy -c \
-        "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" \
-        PixelBackupApp/Sources/PixelBackup/Info.plist
-      /usr/libexec/PlistBuddy -c \
-        "Set :CFBundleVersion ${{ github.run_number }}" \
-        PixelBackupApp/Sources/PixelBackup/Info.plist
-  ```
+- [x] Update `release.yml` to write the tag version into `Info.plist` before building
+  (`CFBundleShortVersionString` from tag, `CFBundleVersion` from `github.run_number`)
 
 ### Step 6 — Privacy manifest
-- [ ] Add `PrivacyInfo.xcprivacy` to `Sources/PixelBackup/Resources/` — required by Apple
-  since May 2024 for any app using `UserDefaults`, file-system APIs, or network access.
-  Minimum content (no data collected, no tracking):
-  ```xml
-  <?xml version="1.0" encoding="UTF-8"?>
-  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-  <plist version="1.0">
-  <dict>
-      <key>NSPrivacyTracking</key><false/>
-      <key>NSPrivacyTrackingDomains</key><array/>
-      <key>NSPrivacyCollectedDataTypes</key><array/>
-      <key>NSPrivacyAccessedAPITypes</key>
-      <array>
-          <dict>
-              <key>NSPrivacyAccessedAPIType</key>
-              <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
-              <key>NSPrivacyAccessedAPITypeReasons</key>
-              <array><string>CA92.1</string></array>
-          </dict>
-      </array>
-  </dict>
-  </plist>
-  ```
-- [ ] Add `PrivacyInfo.xcprivacy` to the `resources` list in `Package.swift`
+- [x] Add `PrivacyInfo.xcprivacy` to `Sources/PixelBackup/Resources/`
+  *(included via Package.swift `.copy("Resources")`; also copied explicitly by `build.sh` / release assemble)*
 
 ### Step 7 — Pre-release checklist
 - [ ] Gatekeeper check after signing: `spctl --assess --type execute --verbose PixelBackup.app`
+  *(runs automatically in CI after notarization when secrets are present)*
 - [ ] Smoke-test the DMG on a clean machine (no Xcode, no `adb` in PATH)
-- [ ] Update `CHANGELOG.md` — move Unreleased items under the new version heading
-- [ ] Publish release: `git tag v1.0.0 && git push origin v1.0.0`
+- [x] Update `CHANGELOG.md` — `1.1.0` cut for pause/disk/continue; other items remain under Unreleased
+- [ ] Publish release: `git tag v1.1.0 && git push origin v1.1.0`
 
 ---
 
 ## GitHub Repository Polish
 
 ### Trust & security
-- [ ] Add **notarization** to CI (secrets in Step 3 above) — this is what makes the DMG open
-  without any warning on personal Macs running default Gatekeeper settings ("identified developers")
-- [ ] Document the **ad-hoc fallback** clearly in README for users who download before notarization
-  is set up: right-click → Open on first launch (one-time bypass, fully safe)
-- [ ] Note in README that corporate MDM-managed Macs ("App Store only" policy via Jamf/Kandji)
-  **cannot** open any non-App-Store app — users in that situation should use the shell script
-  directly: `brew install android-platform-tools && ./pixel_backup.sh`
+- [x] Add **notarization** to CI *(already in `release.yml`; activates when Step 3 secrets are set)*
+- [x] Document the **ad-hoc fallback** in README (right-click → Open on first launch)
+- [x] Note in README that corporate MDM-managed Macs ("App Store only") should use the shell script
 
 ### Auto-update
-- [ ] Add an **in-app update check** — on launch, query the GitHub releases API
-  (`https://api.github.com/repos/OWNER/REPO/releases/latest`) and show a dismissible banner
-  if a newer version tag exists. No telemetry — purely a version string comparison.
-  This replaces the need for Sparkle (heavy) for a simple personal tool.
+- [x] In-app update check (`UpdateChecker` → GitHub releases API + dismissible banner)
 
 ### Discoverability & installation
 - [ ] Add a **Homebrew cask** once a notarized DMG release exists:
@@ -142,12 +101,10 @@ user-chosen folders (see **App Store** section below for details).
 
 Wireless ADB lets the app back up a phone over the local network — no USB cable required.
 The existing backup engine already works with TCP serials (e.g. `192.168.1.10:5555`) because
-`adb -s <serial> pull …` works identically over USB and WiFi. **No changes are needed to
-`BackupManager` or `pixel_backup.sh`.** All work is in the device-discovery / connection layer.
+`adb -s <serial> pull …` works identically over USB and WiFi. **Implemented** in
+`DeviceManager` + pairing sheet; remaining items are device QA only.
 
 ### How wireless ADB works (background)
-
-There are two modes:
 
 | Mode | Android version | Needs USB first? |
 |---|---|---|
@@ -156,10 +113,6 @@ There are two modes:
 
 In both cases the device shows up in `adb devices` as `<ip>:<port>` (e.g. `192.168.1.10:5555`).
 The `:` in the serial is already handled correctly by `sanitize_name()` in the shell script.
-
----
-
----
 
 ### Testing checklist
 - [ ] TCP/IP mode: connect USB → `adb tcpip 5555` in Terminal → unplug → app shows device

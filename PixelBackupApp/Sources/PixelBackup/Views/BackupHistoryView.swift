@@ -3,6 +3,7 @@ import AppKit
 
 struct BackupHistoryView: View {
     let destRootBase: String
+    var onContinue: ((BackupRecord) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
 
     @State private var records: [BackupRecord] = []
@@ -60,7 +61,15 @@ struct BackupHistoryView: View {
                 .padding(60)
             } else {
                 List(records) { record in
-                    BackupRecordRow(record: record)
+                    BackupRecordRow(
+                        record: record,
+                        onContinue: onContinue.map { callback in
+                            {
+                                callback(record)
+                                dismiss()
+                            }
+                        }
+                    )
                 }
                 .listStyle(.inset)
             }
@@ -73,51 +82,31 @@ struct BackupHistoryView: View {
 
     private func loadRecords() async {
         isLoading = true
-        let fm = FileManager.default
-        var result: [BackupRecord] = []
-
-        if let items = try? fm.contentsOfDirectory(atPath: destRootBase) {
+        let base = destRootBase
+        let result: [BackupRecord] = await Task.detached(priority: .utility) {
+            let fm = FileManager.default
+            guard let items = try? fm.contentsOfDirectory(atPath: base) else { return [] }
             let dated = items
                 .filter { $0.range(of: #"^\d{4}-\d{2}-\d{2}"#, options: .regularExpression) != nil }
                 .sorted(by: >)
 
-            for name in dated {
-                let path = "\(destRootBase)/\(name)"
+            return dated.map { name -> BackupRecord in
+                let path = "\(base)/\(name)"
                 var record = BackupRecord(folderName: name, path: path)
-                // Read stats from manifest.tsv (one line per file, col 1 = bytes).
-                // This is O(lines) vs O(file-system-nodes) and orders of magnitude
-                // faster for large backups (140 GB = 18k files = 18k stat() calls).
-                let (count, bytes) = manifestStats(at: path)
+                let (count, bytes) = BackupFolderIndex.manifestStats(at: path)
                 record.fileCount = count
                 record.sizeBytes = bytes
-                result.append(record)
+                record.isIncomplete = BackupFolderIndex.looksIncomplete(at: path)
+                    || (!BackupFolderIndex.hasCompleteStatus(at: path)
+                        && !BackupFolderIndex.folderDateIsToday(name))
+                return record
             }
-        }
+        }.value
 
         await MainActor.run {
             records = result
             isLoading = false
         }
-    }
-
-    /// Read file-count and total bytes from `.transfer_meta/manifest.tsv`.
-    /// Each line is:  bytes TAB remote_path TAB local_path
-    /// Falls back to a quick filesystem count if the manifest is absent.
-    private func manifestStats(at path: String) -> (Int, Int64) {
-        let manifestPath = "\(path)/.transfer_meta/manifest.tsv"
-        if let content = try? String(contentsOfFile: manifestPath, encoding: .utf8) {
-            let lines = content.split(separator: "\n", omittingEmptySubsequences: true)
-            var bytes: Int64 = 0
-            for line in lines {
-                let col = line.prefix(while: { $0 != "\t" })
-                bytes += Int64(col) ?? 0
-            }
-            return (lines.count, bytes)
-        }
-        // Fallback: count direct children (fast, no recursion)
-        let fm = FileManager.default
-        let children = (try? fm.contentsOfDirectory(atPath: path))?.filter { !$0.hasPrefix(".") } ?? []
-        return (children.count, 0)
     }
 }
 
@@ -125,6 +114,7 @@ struct BackupHistoryView: View {
 
 struct BackupRecordRow: View {
     let record: BackupRecord
+    var onContinue: (() -> Void)? = nil
 
     // Checked once when the row appears — no continuous scanning.
     @State private var folderExists: Bool = true
@@ -138,7 +128,7 @@ struct BackupRecordRow: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 6)
                     .padding(.top, 4)
-                    .background(folderExists ? .blue : .gray)
+                    .background(folderExists ? (record.isIncomplete ? .orange : .blue) : .gray)
                 Text(record.day)
                     .font(.title3.bold())
                     .padding(.bottom, 4)
@@ -153,6 +143,11 @@ struct BackupRecordRow: View {
                     .foregroundStyle(folderExists ? .primary : .secondary)
                 if folderExists {
                     HStack(spacing: 12) {
+                        if record.isIncomplete {
+                            Label("Unfinished", systemImage: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
                         Label("\(record.fileCount) files", systemImage: "photo.stack")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -168,6 +163,21 @@ struct BackupRecordRow: View {
             }
 
             Spacer()
+
+            if folderExists, let onContinue {
+                Button {
+                    onContinue()
+                } label: {
+                    Label(record.isIncomplete ? "Continue" : "Add to", systemImage: "play.fill")
+                        .font(.caption)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(record.isIncomplete ? .orange : .accentColor)
+                .controlSize(.small)
+                .help(record.isIncomplete
+                      ? "Resume this unfinished backup into the same dated folder"
+                      : "Copy more files into this existing backup folder")
+            }
 
             Button {
                 NSWorkspace.shared.open(URL(fileURLWithPath: record.path))
@@ -194,6 +204,8 @@ struct BackupRecord: Identifiable {
     let path: String
     var fileCount: Int = 0
     var sizeBytes: Int64 = 0
+    /// True when this folder looks like an unfinished run (paused / interrupted / failed).
+    var isIncomplete: Bool = false
 
     var sizeLabel: String {
         let gb = Double(sizeBytes) / 1_073_741_824
