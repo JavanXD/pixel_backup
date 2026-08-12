@@ -55,11 +55,12 @@ When something changes, update the file that matches the intent:
 - `sanitize_name()` now strips Unicode, emoji, and multi-byte characters; TCP/IP serials (containing colons) are sanitised for use in macOS paths
 
 ### Fixed
+- Crash on backup end (`NOCOPY_SETTER_IMPL` / SIGABRT): `terminationHandler` no longer clears `Process.standardOutput`/`standardError` while `NSFileHandle` fd-monitoring is still active; the pipe is detached via `readabilityHandler = nil` on the main actor instead
 - App crash near backup summary caused by `@MainActor` isolation: `DispatchQueue.main.async` replaced with `Task { @MainActor in }` in termination handler
 - Thread-safety warning in `readabilityHandler` — buffer access confined to a dedicated serial `DispatchQueue`
 - `NotificationManager` crash when running via `swift run` without a bundle identifier
 - Off-screen windows (e.g. from a disconnected external monitor) are relocated to the main display on launch and focus
-- **Cancel crash**: if the user started a new backup while a previously-cancelled process was still winding down, `handleTermination` would call `process?.standardOutput = nil` on the *new* (running) process — Foundation raises an exception for this. The pipe is now disconnected inside the `terminationHandler` closure (where `proc` is the already-terminated instance), and a `backupID` UUID guards against stale terminations ever touching a newer backup's state
+- **Cancel crash**: stale terminations from a previously cancelled process cannot touch a newer backup (`backupID` guard); pipe teardown happens only on the main actor after detaching the file-handle reader
 - **Cancelled summary not shown**: clicking Cancel while the script was in progress showed only the raw log tail; `handleTermination(exit 130)` now parses the partial summary that `on_interrupt()` prints and transitions to `.done(summary:)` with `wasCancelled = true` — so the structured SummaryCard appears with a "Backup Cancelled" header and a "Back" button
 - **State race after completion**: log-line tasks still queued on the main actor when `handleTermination` fires could overwrite `.done(summary:)` with `.failed`; `isTerminating` flag prevents this
 - **`readabilityHandler` resource leak**: the pipe's file handle handler was never set to `nil` after process exit; it is now cleared at the start of `handleTermination`

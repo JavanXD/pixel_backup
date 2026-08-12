@@ -186,15 +186,12 @@ final class BackupManager: ObservableObject {
         }
 
         // terminationHandler fires on an arbitrary background thread.
-        // We clear the process's I/O here (safe — `proc` is already terminated
-        // and is the specific process object, not `self.process` which may have
-        // been replaced by a newer backup).  Then we hop to @MainActor for all
-        // state mutations; passing myBackupID lets handleTermination detect and
-        // ignore stale terminations from previously-cancelled processes.
+        // Never clear proc.standardOutput / standardError here — on recent macOS
+        // that races with NSFileHandle's fd_monitor and throws NOCOPY_SETTER_IMPL
+        // (SIGABRT). Detach the readabilityHandler on the main actor first, then
+        // drop process/pipe references in handleTermination.
         p.terminationHandler = { [weak self] proc in
             let code = proc.terminationStatus
-            proc.standardOutput = nil
-            proc.standardError = nil
             Task { @MainActor [weak self] in
                 self?.handleTermination(exitCode: code, backupID: myBackupID)
             }
