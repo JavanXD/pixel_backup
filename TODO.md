@@ -74,7 +74,7 @@ user-chosen folders (see **App Store** section below for details).
 - [x] Update `CHANGELOG.md` — `1.1.0` cut for pause/disk/continue; other items remain under Unreleased
 - [x] Fix launch crash: packaged `.app` missing SPM resource bundle → `Bundle.module` fatal
   *(safe `AppResources` helper; `build.sh` + `release.yml` embed `PixelBackup_PixelBackup.bundle`)*
-- [ ] Publish release with launch-crash fix (bump past shipped 1.1.0 build 3)
+- [x] Publish release with launch-crash fix — `v1.2.0` (past local 1.1.0 build 3)
 
 ---
 

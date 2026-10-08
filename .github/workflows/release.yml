@@ -246,8 +246,10 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
 
-          CHANGELOG=$(awk '
-            /^## \[/ { if (found) exit; found=1; next }
+          # Extract the section for this tag (not ## [Unreleased]).
+          CHANGELOG=$(awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" { found=1; next }
+            found && /^## \[/ { exit }
             found { print }
           ' CHANGELOG.md)
 

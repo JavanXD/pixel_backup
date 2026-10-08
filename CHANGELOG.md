@@ -25,8 +25,9 @@ When something changes, update the file that matches the intent:
 
 ## [Unreleased]
 
-### Fixed
-- App crash on launch (`EXC_BREAKPOINT` in `Bundle.module`) when the packaged `.app` lacked the SPM resource bundle — resource lookup now uses a safe helper, and `build.sh` / release CI embed `PixelBackup_PixelBackup.bundle` correctly
+---
+
+## [1.2.0] — 2026-10-08
 
 ### Added
 - `PrivacyInfo.xcprivacy` privacy manifest (UserDefaults CA92.1; no tracking / no collected data)
@@ -58,6 +59,7 @@ When something changes, update the file that matches the intent:
 - `sanitize_name()` now strips Unicode, emoji, and multi-byte characters; TCP/IP serials (containing colons) are sanitised for use in macOS paths
 
 ### Fixed
+- App crash on launch (`EXC_BREAKPOINT` in `Bundle.module`) when the packaged `.app` lacked the SPM resource bundle — resource lookup now uses a safe helper, and `build.sh` / release CI embed `PixelBackup_PixelBackup.bundle` correctly
 - Crash on backup end (`NOCOPY_SETTER_IMPL` / SIGABRT): `terminationHandler` no longer clears `Process.standardOutput`/`standardError` while `NSFileHandle` fd-monitoring is still active; the pipe is detached via `readabilityHandler = nil` on the main actor instead
 - App crash near backup summary caused by `@MainActor` isolation: `DispatchQueue.main.async` replaced with `Task { @MainActor in }` in termination handler
 - Thread-safety warning in `readabilityHandler` — buffer access confined to a dedicated serial `DispatchQueue`
