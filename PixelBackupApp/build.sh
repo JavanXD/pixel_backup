@@ -64,18 +64,53 @@ mkdir -p "$CONTENTS/Resources"
 cp "$BINARY" "$CONTENTS/MacOS/$APP_NAME"
 cp "$INFOPLIST" "$CONTENTS/Info.plist"
 
-# Copy bundled resources (adb + pixel_backup.sh)
-BUILT_RESOURCES="$BUILD_DIR/$([ $RELEASE -eq 1 ] && echo release || echo debug)/PixelBackup_PixelBackup.bundle/Contents/Resources"
-if [[ -d "$BUILT_RESOURCES" ]]; then
-    cp -r "$BUILT_RESOURCES/"* "$CONTENTS/Resources/"
-else
-    # Fallback: copy directly from source
-    cp "$ADB_RES" "$CONTENTS/Resources/adb"
-    cp "$SCRIPT_DIR/Sources/PixelBackup/Resources/pixel_backup.sh" "$CONTENTS/Resources/pixel_backup.sh"
+# Locate the SPM resource bundle. Layout is a flat bundle
+# (…/PixelBackup_PixelBackup.bundle/Resources/…), not Contents/Resources.
+CONFIG=$([ $RELEASE -eq 1 ] && echo release || echo debug)
+SPM_BUNDLE=""
+for candidate in \
+    "$BUILD_DIR/$CONFIG/PixelBackup_PixelBackup.bundle" \
+    "$BUILD_DIR/arm64-apple-macosx/$CONFIG/PixelBackup_PixelBackup.bundle" \
+    "$BUILD_DIR/x86_64-apple-macosx/$CONFIG/PixelBackup_PixelBackup.bundle"
+do
+    if [[ -d "$candidate" ]]; then
+        SPM_BUNDLE="$candidate"
+        break
+    fi
+done
+
+# Embed the SPM bundle so localizations + AppResources can resolve it.
+if [[ -n "$SPM_BUNDLE" ]]; then
+    cp -R "$SPM_BUNDLE" "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle"
 fi
+
+# Also flatten runtime binaries into Contents/Resources for Bundle.main fallback
+# and for a stable codesign path.
+copy_runtime_resource() {
+    local name="$1"
+    local dest="$CONTENTS/Resources/$name"
+    for src in \
+        "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle/Resources/$name" \
+        "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle/Contents/Resources/$name" \
+        "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle/Contents/Resources/Resources/$name" \
+        "$SCRIPT_DIR/Sources/PixelBackup/Resources/$name"
+    do
+        if [[ -f "$src" ]]; then
+            cp "$src" "$dest"
+            return 0
+        fi
+    done
+    return 1
+}
+
+copy_runtime_resource "adb" || { echo "ERROR: adb missing from build resources"; exit 1; }
+copy_runtime_resource "pixel_backup.sh" || { echo "ERROR: pixel_backup.sh missing"; exit 1; }
 
 chmod +x "$CONTENTS/Resources/adb"
 chmod +x "$CONTENTS/Resources/pixel_backup.sh"
+# Keep the copy inside the SPM bundle executable too, when present.
+find "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle" -name adb -type f -exec chmod +x {} \; 2>/dev/null || true
+find "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle" -name 'pixel_backup.sh' -type f -exec chmod +x {} \; 2>/dev/null || true
 
 # App icon — must sit directly in Contents/Resources/ for CFBundleIconFile to resolve
 ICON_SRC="$SCRIPT_DIR/Sources/PixelBackup/Resources/AppIcon.icns"
@@ -87,6 +122,14 @@ fi
 PRIVACY_SRC="$SCRIPT_DIR/Sources/PixelBackup/Resources/PrivacyInfo.xcprivacy"
 if [[ -f "$PRIVACY_SRC" ]]; then
     cp "$PRIVACY_SRC" "$CONTENTS/Resources/PrivacyInfo.xcprivacy"
+fi
+
+# Localizations at Resources root so Bundle.main can resolve them too
+if [[ -n "$SPM_BUNDLE" ]]; then
+    for lproj in "$SPM_BUNDLE"/*.lproj; do
+        [[ -d "$lproj" ]] || continue
+        cp -R "$lproj" "$CONTENTS/Resources/"
+    done
 fi
 
 # ─── Code sign ───────────────────────────────────────────────────────────────
@@ -102,6 +145,13 @@ if [[ $RELEASE -eq 1 ]]; then
              --entitlements "$ENTITLEMENTS" \
              --sign "$DEVELOPER_ID" \
              "$CONTENTS/Resources/adb"
+    # Sign any nested adb copies inside the SPM resource bundle.
+    while IFS= read -r nested_adb; do
+        codesign --force --options runtime \
+                 --entitlements "$ENTITLEMENTS" \
+                 --sign "$DEVELOPER_ID" \
+                 "$nested_adb"
+    done < <(find "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle" -name adb -type f 2>/dev/null || true)
 
     echo "▶ Signing $APP_NAME.app…"
     codesign --force --options runtime --deep \

@@ -83,25 +83,44 @@ jobs:
           cp PixelBackupApp/.build/release/PixelBackup "$CONTENTS/MacOS/PixelBackup"
           cp PixelBackupApp/Sources/PixelBackup/Info.plist "$CONTENTS/Info.plist"
 
-          # Multi-arch builds place the resource bundle under the arch-specific dir.
-          BUILT_RES=""
+          # SPM ships a flat resource bundle (…/PixelBackup_PixelBackup.bundle/Resources/),
+          # not Contents/Resources. Embed the whole bundle + flatten runtime binaries.
+          SPM_BUNDLE=""
           for candidate in \
-            "PixelBackupApp/.build/arm64-apple-macosx/release/PixelBackup_PixelBackup.bundle/Contents/Resources" \
-            "PixelBackupApp/.build/x86_64-apple-macosx/release/PixelBackup_PixelBackup.bundle/Contents/Resources" \
-            "PixelBackupApp/.build/release/PixelBackup_PixelBackup.bundle/Contents/Resources"
+            "PixelBackupApp/.build/arm64-apple-macosx/release/PixelBackup_PixelBackup.bundle" \
+            "PixelBackupApp/.build/x86_64-apple-macosx/release/PixelBackup_PixelBackup.bundle" \
+            "PixelBackupApp/.build/release/PixelBackup_PixelBackup.bundle"
           do
             if [ -d "$candidate" ]; then
-              BUILT_RES="$candidate"
+              SPM_BUNDLE="$candidate"
               break
             fi
           done
 
-          if [ -n "$BUILT_RES" ]; then
-            cp -R "$BUILT_RES/"* "$CONTENTS/Resources/"
-          else
-            cp PixelBackupApp/Sources/PixelBackup/Resources/adb           "$CONTENTS/Resources/adb"
-            cp PixelBackupApp/Sources/PixelBackup/Resources/pixel_backup.sh "$CONTENTS/Resources/pixel_backup.sh"
+          if [ -n "$SPM_BUNDLE" ]; then
+            cp -R "$SPM_BUNDLE" "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle"
+            for lproj in "$SPM_BUNDLE"/*.lproj; do
+              [ -d "$lproj" ] || continue
+              cp -R "$lproj" "$CONTENTS/Resources/"
+            done
           fi
+
+          copy_runtime() {
+            local name="$1"
+            for src in \
+              "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle/Resources/$name" \
+              "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle/Contents/Resources/$name" \
+              "PixelBackupApp/Sources/PixelBackup/Resources/$name"
+            do
+              if [ -f "$src" ]; then
+                cp "$src" "$CONTENTS/Resources/$name"
+                return 0
+              fi
+            done
+            return 1
+          }
+          copy_runtime adb
+          copy_runtime pixel_backup.sh
 
           # Privacy manifest must live at Contents/Resources/PrivacyInfo.xcprivacy
           if [ -f PixelBackupApp/Sources/PixelBackup/Resources/PrivacyInfo.xcprivacy ]; then
@@ -109,8 +128,15 @@ jobs:
               "$CONTENTS/Resources/PrivacyInfo.xcprivacy"
           fi
 
+          # App icon for CFBundleIconFile
+          if [ -f PixelBackupApp/Sources/PixelBackup/Resources/AppIcon.icns ]; then
+            cp PixelBackupApp/Sources/PixelBackup/Resources/AppIcon.icns \
+              "$CONTENTS/Resources/AppIcon.icns"
+          fi
+
           chmod +x "$CONTENTS/Resources/adb"
           chmod +x "$CONTENTS/Resources/pixel_backup.sh"
+          find "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle" \( -name adb -o -name 'pixel_backup.sh' \) -type f -exec chmod +x {} \; 2>/dev/null || true
 
       - name: Import signing certificate
         if: steps.secrets.outputs.has_cert == 'true'
@@ -140,6 +166,13 @@ jobs:
             --entitlements "$ENTITLEMENTS" \
             --sign "$DEVELOPER_ID" \
             PixelBackup.app/Contents/Resources/adb
+          find PixelBackup.app/Contents/Resources/PixelBackup_PixelBackup.bundle -name adb -type f 2>/dev/null \
+            | while read -r nested_adb; do
+                codesign --force --options runtime \
+                  --entitlements "$ENTITLEMENTS" \
+                  --sign "$DEVELOPER_ID" \
+                  "$nested_adb"
+              done
           codesign --force --options runtime --deep \
             --entitlements "$ENTITLEMENTS" \
             --sign "$DEVELOPER_ID" \

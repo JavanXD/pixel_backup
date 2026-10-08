@@ -72,7 +72,9 @@ user-chosen folders (see **App Store** section below for details).
   *(runs automatically in CI after notarization when secrets are present)*
 - [ ] Smoke-test the DMG on a clean machine (no Xcode, no `adb` in PATH)
 - [x] Update `CHANGELOG.md` — `1.1.0` cut for pause/disk/continue; other items remain under Unreleased
-- [ ] Publish release: `git tag v1.1.0 && git push origin v1.1.0`
+- [x] Fix launch crash: packaged `.app` missing SPM resource bundle → `Bundle.module` fatal
+  *(safe `AppResources` helper; `build.sh` + `release.yml` embed `PixelBackup_PixelBackup.bundle`)*
+- [ ] Publish release with launch-crash fix (bump past shipped 1.1.0 build 3)
 
 ---
 

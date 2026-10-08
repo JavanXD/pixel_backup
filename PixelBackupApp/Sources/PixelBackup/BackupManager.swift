@@ -62,7 +62,7 @@ final class BackupManager: ObservableObject {
     // MARK: - Script / adb resolution
 
     func resolvedScriptPath() -> String? {
-        if let bundled = Bundle.module.url(forResource: "pixel_backup", withExtension: "sh") {
+        if let bundled = AppResources.url(forResource: "pixel_backup", withExtension: "sh") {
             ensureExecutable(bundled.path)
             return bundled.path
         }

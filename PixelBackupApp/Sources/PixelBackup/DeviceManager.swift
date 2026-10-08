@@ -46,7 +46,7 @@ final class DeviceManager: ObservableObject {
     }
 
     private func bundledAdbPath() -> String? {
-        Bundle.module.url(forResource: "adb", withExtension: nil)?.path
+        AppResources.url(forResource: "adb", withExtension: nil)?.path
     }
 
     private func ensureExecutable(_ path: String) async {

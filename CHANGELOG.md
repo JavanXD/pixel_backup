@@ -25,6 +25,9 @@ When something changes, update the file that matches the intent:
 
 ## [Unreleased]
 
+### Fixed
+- App crash on launch (`EXC_BREAKPOINT` in `Bundle.module`) when the packaged `.app` lacked the SPM resource bundle — resource lookup now uses a safe helper, and `build.sh` / release CI embed `PixelBackup_PixelBackup.bundle` correctly
+
 ### Added
 - `PrivacyInfo.xcprivacy` privacy manifest (UserDefaults CA92.1; no tracking / no collected data)
 - `Documents` added as a default copy folder
