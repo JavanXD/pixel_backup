@@ -121,6 +121,7 @@ jobs:
           }
           copy_runtime adb
           copy_runtime pixel_backup.sh
+          copy_runtime dedupe_backups.sh
 
           # Privacy manifest must live at Contents/Resources/PrivacyInfo.xcprivacy
           if [ -f PixelBackupApp/Sources/PixelBackup/Resources/PrivacyInfo.xcprivacy ]; then
@@ -136,7 +137,8 @@ jobs:
 
           chmod +x "$CONTENTS/Resources/adb"
           chmod +x "$CONTENTS/Resources/pixel_backup.sh"
-          find "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle" \( -name adb -o -name 'pixel_backup.sh' \) -type f -exec chmod +x {} \; 2>/dev/null || true
+          chmod +x "$CONTENTS/Resources/dedupe_backups.sh"
+          find "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle" \( -name adb -o -name 'pixel_backup.sh' -o -name 'dedupe_backups.sh' \) -type f -exec chmod +x {} \; 2>/dev/null || true
 
       - name: Import signing certificate
         if: steps.secrets.outputs.has_cert == 'true'

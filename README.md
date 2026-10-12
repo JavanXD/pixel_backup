@@ -100,12 +100,34 @@ Each backup run creates a dated subfolder:
         ├── manifest.tsv       # all successfully copied files (cumulative)
         ├── manifest_run.tsv   # files copied in this run only
         ├── failed.tsv         # files that failed after all retries
-        └── transfer.log       # full timestamped log
+        ├── transfer.log       # full timestamped log
+        ├── run_status         # complete | paused | … (when present)
+        ├── dedupe_state       # optional: after Reduce vs previous
+        └── dedupe_log         # optional: reduce apply log
 ```
 
 Running again on the **same day** resumes into the same folder. A **new date** normally creates a new folder.
 
 If a previous run did not finish (disk full, pause, cancel, crash), the app offers **Continue Unfinished** so today can finish into that older dated folder — already-copied files are skipped. You can also open **History** and press **Continue** / **Add to** on any past backup.
+
+### Reduce duplicates (optional, after backups)
+
+Backups always stay **full** dated trees. To reclaim disk when two consecutive same-device backups share identical files, run a separate **reduce** step (never part of `adb pull`):
+
+```bash
+# Estimate vs previous complete same-device backup (default)
+./dedupe_backups.sh --dry-run ~/Pictures/pixel_backup/2026-03-19_Pixel_10_Pro_XL_SERIAL
+
+# Apply in-place (SHA-256 verified; APFS clone preferred, else hardlink)
+./dedupe_backups.sh --apply ~/Pictures/pixel_backup/2026-03-19_Pixel_10_Pro_XL_SERIAL
+
+# Explicit pair (baseline keeps bytes; --older is reduced)
+./dedupe_backups.sh --dry-run \
+  --canonical ~/Pictures/pixel_backup/2026-03-19_Pixel_10_Pro_XL_SERIAL \
+  --older ~/Pictures/pixel_backup/2026-02-01_Pixel_10_Pro_XL_SERIAL
+```
+
+Or in the app: **History** → **Reduce duplicates…** on a complete backup row. Choose **Reduce this backup** (gets links) and **Using baseline** (keeps real bytes); defaults to the opened row as baseline and its previous complete same-device backup. Dry-run shows a list of candidate duplicate paths and sizes before Apply. State is stored under the reduce folder’s `.transfer_meta/dedupe_state` so re-runs are idempotent.
 
 ---
 
@@ -161,6 +183,7 @@ All parameters are environment variables:
 ```
 pixel-backup/
 ├── pixel_backup.sh               # Core shell script (works standalone)
+├── dedupe_backups.sh             # Optional cross-backup reduce (clone/hardlink)
 ├── PixelBackupApp/
 │   └── Sources/PixelBackup/
 │       ├── PixelBackupApp.swift  # App entry, WindowGroup, menu bar
@@ -181,7 +204,7 @@ pixel-backup/
 │           ├── DestinationPickerView.swift  # Path picker + drag-drop + free space
 │           ├── BackupProgressSection.swift  # Live progress bar, speed, ETA, elapsed
 │           ├── SummaryCard.swift            # Post-backup summary
-│           ├── BackupHistoryView.swift      # Dated backup list (reads manifest.tsv)
+│           ├── BackupHistoryView.swift      # Dated backup list + Reduce vs previous
 │           ├── LogView.swift                # Colour-coded scrolling log
 │           ├── HintBannerView.swift         # Dismissible runtime hints
 │           └── SetupGuideView.swift         # adb not found onboarding

@@ -62,15 +62,37 @@ final class BackupManager: ObservableObject {
     // MARK: - Script / adb resolution
 
     func resolvedScriptPath() -> String? {
-        if let bundled = AppResources.url(forResource: "pixel_backup", withExtension: "sh") {
+        resolvedBundledScript(named: "pixel_backup")
+    }
+
+    /// Cross-backup reduce script (`dedupe_backups.sh`) — separate from backup pull/copy.
+    func resolvedDedupeScriptPath() -> String? {
+        resolvedBundledScript(named: "dedupe_backups")
+    }
+
+    private func resolvedBundledScript(named name: String) -> String? {
+        if let bundled = AppResources.url(forResource: name, withExtension: "sh") {
             ensureExecutable(bundled.path)
             return bundled.path
         }
-        // Development fallback — script alongside the built binary
         let devPath = URL(fileURLWithPath: #file)
             .deletingLastPathComponent()
-            .appendingPathComponent("Resources/pixel_backup.sh").path
-        if FileManager.default.isExecutableFile(atPath: devPath) { return devPath }
+            .appendingPathComponent("Resources/\(name).sh").path
+        if FileManager.default.fileExists(atPath: devPath) {
+            ensureExecutable(devPath)
+            return devPath
+        }
+        // Repo-root fallback when running from a source checkout (`swift run`)
+        let repoRoot = URL(fileURLWithPath: #file)
+            .deletingLastPathComponent() // BackupManager.swift dir
+            .deletingLastPathComponent() // PixelBackup/
+            .deletingLastPathComponent() // Sources/
+            .deletingLastPathComponent() // PixelBackupApp/
+            .appendingPathComponent("\(name).sh").path
+        if FileManager.default.fileExists(atPath: repoRoot) {
+            ensureExecutable(repoRoot)
+            return repoRoot
+        }
         return nil
     }
 

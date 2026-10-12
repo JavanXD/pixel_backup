@@ -22,6 +22,8 @@ Remaining work across the project. Everything already implemented is tracked in 
 - [ ] Test cancel — press Cancel mid-transfer; confirm partial files are cleaned up and the SummaryCard appears with "Backup Cancelled" header showing files copied so far
 - [ ] Test on Apple Silicon Mac (M-series)
 - [ ] Test on Intel Mac (pre-2021)
+- [ ] Multi-display: with a window key on display A, click the menu-bar icon on display B — context menu must open under the icon (not on A)
+  *(fixed in AppDelegate: popUp in status-item button space; smoke locally after rebuild)*
 
 ---
 
@@ -126,9 +128,44 @@ The `:` in the serial is already handled correctly by `sanitize_name()` in the s
 
 ---
 
+## Needs your decision
+
+- [x] **Cross-backup disk savings (History “newest” / reduce duplicates)** — decided 2026-10-12:
+  - **Ship A:** APFS clone / hardlink dedupe — each dated folder stays a full browsable tree; overlapping identical files share storage. Fits “Open in Finder” (`BackupHistoryView`, no restore assembler).
+  - **Not now:** B (link-dest / hardlink-from-previous *inside* the backup pull/copy path).
+  - **Rejected:** C (sparse incrementals / delete overlapping files from older folders).
+  - **Locked design:**
+    - Backup function stays unchanged — always a full backup as today; do **not** mutate the active backup / pull path.
+    - Reduce is a **separate additional step** after backups (script + UI), never integrated into pull/copy.
+    - **CLI default:** one folder → auto **previous** complete same-device as the reduce side; that folder is canonical/baseline.
+    - **UI / explicit CLI:** user may pick any complete same-device pair (`--canonical` + `--older`); roles are as designated (baseline keeps bytes).
+    - Persist **already-reduced** state so later runs know what was done; keep reduce timing decoupled from “when next backup happens.”
+    - No sparse rewrite of trees.
+  - **Defaults chosen (2026-10-12 implement):**
+    - **In-place** link replace (not staged full copy / verify-then-swap).
+    - **Always SHA-256 on apply** (dry-run estimates via path+size; optional `DEDUPE_HASH_ON_DRY_RUN=1`).
+    - **Same-device-only** (folder name suffix after `YYYY-MM-DD_`); same volume required.
+    - **UI:** History “Reduce duplicates…” with pair pickers (smart default = opened row as baseline + previous as reduce); dry-run candidate list; multi-select History not in v1.
+
+### Cross-backup reduce (shipped)
+
+Separate post-backup step; does not change `pixel_backup.sh` pull/copy during an active backup.
+
+- [x] **Reduce script** — `dedupe_backups.sh` (+ bundled Resources copy): one-arg CLI defaults to previous complete same-device; optional `--canonical` / `--older` (or `--reduce`) for an explicit pair; APFS clone preferred else hardlink; browsable trees; `.transfer_meta/dedupe_state` + `dedupe_log`
+- [x] **App UI** — History “Reduce duplicates…”: pick **Reduce this backup** + **Using baseline** (defaults: previous + opened row); dry-run estimate with curated candidate path/size list → Apply / Cancel; script log secondary; not wired into backup start
+- [x] **State tracking** — `dedupe_state` / `dedupe_reduced` on the older/reduce folder; re-runs idempotent (`--force` to re-scan)
+- [x] **Apply progress in sheet** — parse `PROGRESS phase=hash|link …` (linked / hashed / reclaimable_bytes / candidates); linear progress instead of bare spinner
+- [x] **Faster apply hashing** — parallel SHA-256 via `xargs -P` (default=`hw.logicalcpu`, override `DEDUPE_HASH_JOBS`); one `shasum` process hashes both paths per pair; link phase still sequential clone→hardlink
+- [x] **Candidate list cap** — UI keeps top 150 by size + “+N more”; SUMMARY totals / reclaimable unchanged
+- [x] **Same-volume preflight** — Swift `stat` device id + `volumeSupportsFileCloning` / hardlinks before dry-run/apply; hardlink-only hint when not APFS
+- [ ] Optional later (not in scope now): B — link-dest / clone-from-previous during future backup pulls
+- [ ] Optional later: multi-select History reduce in one shot (pair pickers already cover non-adjacent)
+- [ ] Device QA: reduce on a real multi-backup APFS volume; confirm Finder browse + reclaimable space
+
 ## Future Ideas
 
 - [ ] Scheduled / automatic backups via `LaunchAgent`
+- [ ] Optional: link-dest inside backup path (option B) — only after reduce (A) ships and proves useful
 
 ---
 

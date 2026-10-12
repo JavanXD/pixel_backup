@@ -25,6 +25,13 @@ When something changes, update the file that matches the intent:
 
 ## [Unreleased]
 
+### Fixed
+- Menu-bar context menu opening on the wrong display: no longer assign `NSStatusItem.menu` permanently; pop the menu up in the status-item button’s coordinate space so it tracks the icon
+
+### Added
+- Cross-backup **reduce duplicates**: `dedupe_backups.sh` (dry-run / apply) links identical files to a canonical baseline via APFS clone or hardlink — separate from backup pull/copy; one-arg CLI still defaults to previous same-device; optional `--canonical` / `--older` for an explicit pair
+- History **Reduce duplicates…**: pick reduce folder + baseline (defaults to previous + opened row), dry-run candidate path/size list, then Apply; state under `.transfer_meta/dedupe_state`
+
 ---
 
 ## [1.2.0] — 2026-10-08

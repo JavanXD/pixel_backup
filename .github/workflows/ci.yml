@@ -6,6 +6,7 @@ on:
     paths:
       - "PixelBackupApp/**"
       - "pixel_backup.sh"
+      - "dedupe_backups.sh"
       - ".github/workflows/ci.yml"
       - ".github/actions/setup-adb/**"
   pull_request:
@@ -13,6 +14,7 @@ on:
     paths:
       - "PixelBackupApp/**"
       - "pixel_backup.sh"
+      - "dedupe_backups.sh"
       - ".github/workflows/ci.yml"
       - ".github/actions/setup-adb/**"
 
@@ -46,5 +48,9 @@ jobs:
       - name: Build (debug)
         run: swift build --package-path PixelBackupApp
 
-      - name: Lint pixel_backup.sh
-        run: bash -n pixel_backup.sh && echo "Shell script syntax OK"
+      - name: Lint shell scripts
+        run: |
+          bash -n pixel_backup.sh && echo "pixel_backup.sh syntax OK"
+          bash -n dedupe_backups.sh && echo "dedupe_backups.sh syntax OK"
+          diff -q dedupe_backups.sh PixelBackupApp/Sources/PixelBackup/Resources/dedupe_backups.sh \
+            && echo "dedupe_backups.sh Resources copy in sync"

@@ -28,9 +28,7 @@ struct PixelBackupApp: App {
                 .keyboardShortcut("r", modifiers: .command)
             }
         }
-        // Note: MenuBarExtra removed — the status item is managed directly by
-        // AppDelegate using NSStatusItem so the menu always appears anchored
-        // to the icon on the correct display (SwiftUI MenuBarExtra has a known
-        // positioning bug on multi-display setups).
+        // Note: MenuBarExtra removed — AppDelegate owns an NSStatusItem and pops
+        // the menu in the button's coordinate space (avoids wrong-display menus).
     }
 }

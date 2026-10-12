@@ -10,6 +10,9 @@ extension Notification.Name {
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private var statusItem: NSStatusItem?
+    /// Retained menu shown via click handler (never assigned to `statusItem.menu`
+    /// permanently — that path can open on the wrong display with multiple monitors).
+    private var statusMenu: NSMenu!
 
     // MARK: - Lifecycle
 
@@ -32,13 +35,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return false
     }
 
-    // MARK: - NSStatusItem (AppKit — always anchors menu to icon on correct display)
+    // MARK: - NSStatusItem
+    //
+    // Do not set `statusItem.menu` permanently. With multiple displays (or a
+    // key window on another screen), AppKit can present that menu on the wrong
+    // display. Instead, handle the button click and pop the menu up in the
+    // status-item button's coordinate space so it tracks the icon.
 
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusMenu = buildMenu()
+        statusMenu.delegate = self
         updateStatusIcon(running: false)
-        statusItem?.menu = buildMenu()
-        statusItem?.menu?.delegate = self
+
+        guard let button = statusItem?.button else { return }
+        button.target = self
+        button.action = #selector(statusItemClicked(_:))
+        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
     }
 
     private func buildMenu() -> NSMenu {
@@ -74,6 +87,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         return menu
     }
 
+    @objc private func statusItemClicked(_ sender: Any?) {
+        guard let button = statusItem?.button else { return }
+
+        // Highlight while open; menuDidClose clears it.
+        button.isHighlighted = true
+
+        // Anchor in the button's local space so the menu opens under the icon
+        // on whichever display hosts the menu bar item.
+        statusMenu.popUp(positioning: nil, at: NSPoint(x: 0, y: 0), in: button)
+    }
+
     // Refresh the status label just before the menu appears.
     func menuWillOpen(_ menu: NSMenu) {
         let count = BackupCoordinator.shared.runningCount
@@ -84,6 +108,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         default: label = "\(count) backups running…"
         }
         menu.items.first?.title = label
+        statusItem?.button?.isHighlighted = true
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        statusItem?.button?.isHighlighted = false
     }
 
     private func updateStatusIcon(running: Bool) {

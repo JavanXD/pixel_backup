@@ -105,12 +105,14 @@ copy_runtime_resource() {
 
 copy_runtime_resource "adb" || { echo "ERROR: adb missing from build resources"; exit 1; }
 copy_runtime_resource "pixel_backup.sh" || { echo "ERROR: pixel_backup.sh missing"; exit 1; }
+copy_runtime_resource "dedupe_backups.sh" || { echo "ERROR: dedupe_backups.sh missing"; exit 1; }
 
 chmod +x "$CONTENTS/Resources/adb"
 chmod +x "$CONTENTS/Resources/pixel_backup.sh"
+chmod +x "$CONTENTS/Resources/dedupe_backups.sh"
 # Keep the copy inside the SPM bundle executable too, when present.
 find "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle" -name adb -type f -exec chmod +x {} \; 2>/dev/null || true
-find "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle" -name 'pixel_backup.sh' -type f -exec chmod +x {} \; 2>/dev/null || true
+find "$CONTENTS/Resources/PixelBackup_PixelBackup.bundle" \( -name 'pixel_backup.sh' -o -name 'dedupe_backups.sh' \) -type f -exec chmod +x {} \; 2>/dev/null || true
 
 # App icon — must sit directly in Contents/Resources/ for CFBundleIconFile to resolve
 ICON_SRC="$SCRIPT_DIR/Sources/PixelBackup/Resources/AppIcon.icns"
